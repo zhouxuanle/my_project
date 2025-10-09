@@ -58,74 +58,135 @@ def generate_user_data():
     profile = fake.profile()
     age = fake.random_int(min=18, max=90)
     user_id = str(uuid.uuid4())
+    password_default = fake.password()
     user_info_data = {
-        "user_id": user_id,
+        "id": user_id,
         "username": profile['username'],
-        "name": profile['name'],
+        "real_name": profile['name'],
         "phone_number": fake.phone_number(),
         "sex": profile['sex'],
         "job": profile['job'],
         "company": profile['company'],
-        "address": profile['address'],
-        "mail": profile['mail'],
-        "birthdate": profile['birthdate'],
+        "email": profile['mail'],
+        "password":password_default,
+        "birth_of_date": profile['birthdate'],
         "age": age,
         "create_time": create_time,
         "delete_time": delete_time
     }
     return user_info_data
 
+# Generate Address Table Data
+def generate_fake_address():
+    create_time = fake.date_time_between(start_date='-2y', end_date='now')
+    delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+    # Custom titles for the address, since Faker doesn't have a specific provider for this.
+    address_titles = [
+        "Home Address",
+        "Work Address",
+        "Billing Address",
+        "Shipping Address",
+        "Vacation Home"
+    ]
+    
+        # Combine address parts from Faker
+    street_address = fake.street_address()
+    secondary_address = fake.secondary_address()
+    full_address_line = f"{street_address} {secondary_address}"
+
+    address_data = {
+        "id": str(uuid.uuid4()),
+        "user_id":""
+        "title": choice(address_titles),
+        "address_line": full_address_line,
+        "country": fake.country(),
+        "city": fake.city(),
+        "postal_code": fake.postcode(),
+        "create_time": create_time,
+        "delete_time": delete_time
+    }
+    
+    return address_data
 
 
 # Generate Categories Table Data
-def generate_categories_data_event():
+def generate_categories_data():
     create_time = fake.date_time_between(start_date='-2y', end_date='now')
     delete_time = fake.date_time_between(start_date=create_time, end_date='now')
     category_id = str(uuid.uuid4())  
-    category_name = fake.unique.word().capitalize() + " Category"
+    category_name = fake.ecommerce_category()
+    description = fake.text(max_nb_chars=10)
     categories_data = {
-        "category_id": category_id, 
+        "id": category_id, 
         "category_name": category_name,
+        "description": description,
         "create_time": create_time,
         "delete_time": delete_time
     }
     return categories_data
 
 # Generate Subcategories Table Data
-def generate_subcategories_data_event(category):
+def generate_subcategories_data(category):
     create_time = fake.date_time_between(start_date='-2y', end_date='now')
     delete_time = fake.date_time_between(start_date=create_time, end_date='now')
     subcategory_id = str(uuid.uuid4())
     subcategory_name = fake.unique.word().capitalize() + " Subcategory"
+    description = fake.text(max_nb_chars=50)
     subcategories_data = {
-        "subcategory_id": subcategory_id,
-        "category_id": category["category_id"],
-        "subcategory_name": subcategory_name,
+        "id": subcategory_id,
+        "parent_id": category["id"],
+        "name": subcategory_name,
+        "description": description,
         "create_time": create_time,
         "delete_time": delete_time
     }
     return subcategories_data
 
 # Generate Products Table Data
-def generate_products_data_event(subcategory):
+def generate_products_data(subcategory):
     create_time = fake.date_time_between(start_date='-2y', end_date='now')
     delete_time = fake.date_time_between(start_date=create_time, end_date='now')
     product_id = str(uuid.uuid4())
     product_name = fake.unique.catch_phrase()
     product_description = fake.paragraph()
-    product_price = round(random.uniform(5.0, 500.0), 2)
-    product_stock = random.randint(0, 200)
+    # product_price = round(random.uniform(5.0, 500.0), 2)
+    # product_stock = random.randint(0, 200)
     products_data = {
-        "product_id": product_id,
-        "subcategory_id": subcategory["subcategory_id"],
-        "product_name": product_name,
-        "product_description": product_description,
-        "product_price": product_price,
-        "product_stock": product_stock,
+        "id": product_id,
+        "name": product_name,
+        "description": product_description,
+        "subcategory_id": subcategory["id"],
+        # "product_price": product_price,
+        # "product_stock": product_stock,
         "create_time": create_time,
         "delete_time": delete_time
     }
     return products_data
+
+# Generate product_sku Table Data
+def generate_sku_data(product):
+    create_time = fake.date_time_between(start_date='-2y', end_date='now')
+    delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+    sku_id = fake.unique.random_int(min=1, max=num_rows * 10)
+    brand = fake.word().upper()
+    product_type = fake.word().upper()
+    sku_number = fake.unique.random_number(digits=5, fix_len=True)
+    sku = f"{brand[:3]}-{product_type[:3]}-{sku_number}"
+    price = round(random.uniform(5.0, 500.0), 2)  
+    quantity = random.randint(0, 1000)          
+    
+    skus_data = {
+        "id": sku_id,
+        "product_id": product["id"],
+        "sku": sku,
+        "price": price,
+        "quantity": quantity,
+        "create_time": create_time,
+        "delete_time": delete_time
+        }
+
+    return skus_data
+
 
 # Generate shipping Table Data
 def generate_shipping_status_event(order_id):
@@ -144,43 +205,47 @@ def generate_shipping_status_event(order_id):
     return shipping_data
 
 # Generate Cart Table Data
-def generate_cart_data_event():
+def generate_cart_data_event(user,products_sku,cartItem):
     create_time = fake.date_time_between(start_date='-2y', end_date='now')
     delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+    cart_id = fake.unique.random_int(min=1, max=99999999999)
+    total_price = cartItem["quantity"] * products_sku["price"]
     carts_data = {
-        'cart_id': i,
-        'user_id': random.choice(user_ids),
-        'created_at': fake.date_time_between(start_date='-1y', end_date='now'),
-        'updated_at': fake.date_time_between(start_date='-6m', end_date='now'),
+        'id': cart_id,
+        'user_id': user["id"],
+        'total':total_price,
         "create_time": create_time,
-        "delete_time": delete_time
+        'updated_at': fake.date_time_between(start_date='-6m', end_date='now')
         }
     return carts_data
 
 # Generate CartItem Table Data
-def generate_cartItem_data_event():
+def generate_cartItem_data_event(cart,product,products_sku):
     create_time = fake.date_time_between(start_date='-2y', end_date='now')
     delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+    cartItem_id = fake.unique.random_int(min=1, max=99999999999)
     cart_items_data = {
-        'cart_item_id': i,
-        'cart_id': random.choice(cart_ids),
-        'product_id': random.choice(product_ids),
+        'id': cartItem_id,
+        'cart_id': cart["id"],
+        'product_id': products_sku["id"],
         'quantity': random.randint(1, 5),
-        'added_at': fake.date_time_between(start_date='-6m', end_date='now'),
         "create_time": create_time,
-        "delete_time": delete_time
+        'updated_at': fake.date_time_between(start_date='-6m', end_date='now')
         }
     return cart_items_data
 
 # Generate Wishlist Table Data
-def generate_wishlist_data_event():
+def generate_wishlist_data(product,user):
     create_time = fake.date_time_between(start_date='-2y', end_date='now')
     delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+    wishlist_id = fake.unique.random_int(min=1, max=99999999999)
     wishlists_data = {
-        'wishlist_id': i,
-        'user_id': user_id,
-        'product_id': product_id,
-        'added_at': fake.date_time_between(start_date='-1y', end_date='now'),
+        'id': wishlist_id,
+        'user_id': user["id"],
+        'product_id': product["id"],
         "create_time": create_time,
         "delete_time": delete_time
             }
+    return wishlists_data
+    
+print('sss')
