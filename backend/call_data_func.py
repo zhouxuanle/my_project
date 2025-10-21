@@ -17,8 +17,8 @@ data_li = [user,address,category,subcategory,product,products_sku,wishlist,payme
 
 count = 1
 for i in data_li:
-    print(count)
-    print(i,end="\n")
+    # print(count)
+    # print(i,end="\n")
     count += 1
 
 

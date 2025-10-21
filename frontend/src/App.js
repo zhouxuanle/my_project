@@ -6,7 +6,9 @@ function App() {
 
   const handleClick = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/hello'); // Flask default port
+      const response = await fetch('http://127.0.0.1:5000/generate_data',{
+        method: 'POST'
+      }); // Flask default port
       const data = await response.json();
       setMessage(data.message);
     } catch (error) {
