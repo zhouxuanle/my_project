@@ -19,3 +19,13 @@ button {
   cursor: pointer;
   margin-top: 20px;
 }
+
+.typewriter-text {
+  border-right: 2px solid white;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { border-color: white; }
+  51%, 100% { border-color: transparent; }
+}

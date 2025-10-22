@@ -14,14 +14,16 @@ fake.add_provider(CommerceProvider)
 
 class DataGenerator:
     def __init__(self):
-        self.create_time = fake.date_time_between(start_date = '-2y', end_date = 'now')
+        self.create_time = datetime.now()
         self.delete_time = fake.date_time_between(start_date = self.create_time, end_date = 'now')
         self.update_time = fake.date_time_between(start_date = self.create_time, end_date = self.delete_time)
 
     # Generate user_info Table Data
     def generate_user_data(self):
         profile = fake.profile()
-        age = fake.random_int(min=18, max=90) 
+        birth_of_date = fake.date_of_birth(minimum_age=18, maximum_age=75)
+        current_year = int(datetime.now().year)
+        age = current_year - int(birth_of_date.year)
         user_id = f"user_id-{uuid.uuid4()}"
         password_default = fake.password()
         user_info_data = {
@@ -34,7 +36,7 @@ class DataGenerator:
             "company": profile['company'],
             "email": profile['mail'],
             "password":password_default,
-            "birth_of_date": profile['birthdate'],
+            "birth_of_date": birth_of_date,
             "age": age,
             "create_time": self.create_time,
             "delete_time": self.delete_time
