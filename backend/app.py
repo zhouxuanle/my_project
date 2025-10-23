@@ -19,16 +19,25 @@ def write_to_db():
         # 建立连接
         connection = pymysql.connect(**config)
         user = gd.generate_user_data()
-        
+        address = gd.generate_fake_address(user)
+        category = gd.generate_categories_data()
+        subcategory = gd.generate_subcategories_data(category)
+        product = gd.generate_products_data(subcategory)
+        products_sku = gd.generate_sku_data(category,subcategory,product)
+        wishlist = gd.generate_wishlist_data(products_sku,user)
+        payment = gd.generate_payment_details_data()
+        order = gd.generate_order_details_data(user,payment)
+        order_item = gd.generate_order_item_data(products_sku,order)
+        cart = gd.generate_cart_data(products_sku,order)
         with connection.cursor() as cursor:
  
             # 插入用户数据到数据库
-            insert_query = """
+            insert_user_query = """
             INSERT INTO users (id, user_name, real_name, phone_number, sex, job, company, email, password, birth_of_date, age, created_at, deleted_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             
-            cursor.execute(insert_query, (
+            cursor.execute(insert_user_query, (
                 user['id'],
                 user['username'],
                 user['real_name'],
@@ -44,12 +53,162 @@ def write_to_db():
                 user['delete_time']
             ))
             
+            # 插入地址数据到数据库
+            insert_address_query = """
+            INSERT INTO addresses (id, user_id, title, address_line, country, city, postal_code, created_at, deleted_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            
+            cursor.execute(insert_address_query, (
+                address['id'],
+                address['user_id'],
+                address['title'],
+                address['address_line'],
+                address['country'],
+                address['city'],
+                address['postal_code'],
+                address['create_time'],
+                address['delete_time']
+            ))
+            
+            # 插入分类数据到数据库
+            insert_category_query = """
+            INSERT INTO categories (id, name, description, created_at, deleted_at)
+            VALUES (%s, %s, %s, %s, %s)
+            """
+            
+            cursor.execute(insert_category_query, (
+                category['id'],
+                category['name'],
+                category['description'],
+                category['create_time'],
+                category['delete_time']
+            ))
+            
+            # 插入子分类数据到数据库
+            insert_subcategory_query = """
+            INSERT INTO sub_categories (id, parent_id, name, description, created_at, deleted_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            
+            cursor.execute(insert_subcategory_query, (
+                subcategory['id'],
+                subcategory['parent_id'],
+                subcategory['name'],
+                subcategory['description'],
+                subcategory['create_time'],
+                subcategory['delete_time']
+            ))
+            
+            # 插入产品数据到数据库
+            insert_product_query = """
+            INSERT INTO products (id, name, description, category_id, created_at, deleted_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            
+            cursor.execute(insert_product_query, (
+                product['id'],
+                product['name'],
+                product['description'],
+                product['category_id'],
+                product['create_time'],
+                product['delete_time']
+            ))
+            
+            # 插入产品SKU数据到数据库
+            insert_sku_query = """
+            INSERT INTO products_skus (id, product_id, price, stock, created_at, deleted_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            
+            cursor.execute(insert_sku_query, (
+                products_sku['id'],
+                products_sku['product_id'],
+                products_sku['price'],
+                products_sku['quantity'],
+                products_sku['create_time'],
+                products_sku['delete_time']
+            ))
+            
+            # 插入支付详情数据到数据库
+            insert_payment_query = """
+            INSERT INTO payment_details (id, amount, provider, status, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            
+            cursor.execute(insert_payment_query, (
+                payment['id'],
+                payment['amount'],
+                payment['provider'],
+                payment['status'],
+                payment['create_time'],
+                payment['updated_at']
+            ))
+            
+            # 插入订单详情数据到数据库
+            insert_order_query = """
+            INSERT INTO order_details (id, user_id, payment_id, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s)
+            """
+            
+            cursor.execute(insert_order_query, (
+                order['id'],
+                order['user_id'],
+                order['payment_id'],
+                order['create_time'],
+                order['updated_at']
+            ))
+            
+            # 插入心愿单数据到数据库
+            insert_wishlist_query = """
+            INSERT INTO wishlist (id, user_id, products_sku_id, created_at, deleted_at)
+            VALUES (%s, %s, %s, %s, %s)
+            """
+            
+            cursor.execute(insert_wishlist_query, (
+                wishlist['id'],
+                wishlist['user_id'],
+                wishlist['products_sku_id'],
+                wishlist['create_time'],
+                wishlist['delete_time']
+            ))
+            
+            # 插入订单项数据到数据库
+            insert_order_item_query = """
+            INSERT INTO order_item (id, order_id, products_sku_id, quantity, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            
+            cursor.execute(insert_order_item_query, (
+                order_item['id'],
+                order_item['order_id'],
+                order_item['products_sku_id'],
+                order_item['quantity'],
+                order_item['create_time'],
+                order_item['updated_at']
+            ))
+            
+            # 插入购物车数据到数据库
+            insert_cart_query = """
+            INSERT INTO cart (id, order_id, products_sku_id, quantity, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            
+            cursor.execute(insert_cart_query, (
+                cart['id'],
+                cart['order_id'],
+                cart['products_sku_id'],
+                cart['quantity'],
+                cart['create_time'],
+                cart['updated_at']
+            ))
+            
             # 提交事务
             connection.commit()
             
             return jsonify({
                 'success': True,
-                'message': f'用户:{user["real_name"]}',
+                'message': f'your user name is : {user['username']}',
                 'user_id': user['id']
             })
 
