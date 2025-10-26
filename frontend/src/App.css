@@ -67,7 +67,6 @@ button {
 
 /* Data Table Page Styles */
 .table-container {
-  max-width: 800px;
   margin: 0 auto;
   padding: 20px;
   background: rgba(255, 255, 255, 0.1);
@@ -99,4 +98,87 @@ button {
 .table-container button:hover {
   background-color: #3a3f47; /* Same hover color as arrow-container */
   transform: translateX(-5px); /* Slide left instead of right */
+}
+
+/* Data Table Header - Move content to higher position */
+.data-table-header {
+  justify-content: flex-start !important;
+}
+
+/* Data Table Styles */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.data-table thead {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.data-table th {
+  padding: 1.2vw 1.5vw;
+  text-align: center;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: clamp(12px, 1.2vw, 20px);
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.data-table td {
+  padding: 1vw 1.5vw;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  word-wrap: break-word;
+  font-size: clamp(11px, 1vw, 15px);
+}
+
+.data-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.data-table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Responsive adjustments for different screen sizes */
+@media (max-width: 768px) {
+  .data-table th {
+    padding: 10px 12px;
+    font-size: 10px;
+  }
+  
+  .data-table td {
+    padding: 8px 12px;
+    font-size: 9px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .data-table th {
+    padding: 11px 15px;
+    font-size: 13px;
+  }
+  
+  .data-table td {
+    padding: 9px 15px;
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .data-table th {
+    padding: 1.2vw 1.5vw;
+  }
+  
+  .data-table td {
+    padding: 1vw 1.5vw;
+  }
 }
