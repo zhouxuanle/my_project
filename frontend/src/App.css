@@ -17,7 +17,6 @@ button {
   padding: 10px 20px;
   font-size: 16px;
   cursor: pointer;
-  margin-top: 20px;
 }
 
 .typewriter-text {
@@ -68,10 +67,62 @@ button {
 /* Data Table Page Styles */
 .table-container {
   margin: 0 auto;
-  padding: 20px;
+  padding: 1.5vw 1.5vw 1.5vw 1.5vw; /* Add top padding to make room for button */
   background: rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   backdrop-filter: blur(10px);
+  position: relative;
+  min-height: 400px;
+  width:90%;
+}
+
+/* Table List Button - Top Left */
+.table-list-button {
+  top: 20px;
+  left: 20px;
+  padding: 12px 20px;
+  font-size: 14px;
+  background-color: #282c34;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.table-list-button:hover {
+  background-color: #3a3f47;
+  transform: scale(1.05);
+}
+
+/* Center Button Container */
+.center-button-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  justify-items: center;
+  align-content: center;
+  min-height: 300px;
+  width: 100%;
+}
+
+/* User Table Button - Center */
+.user-table-button {
+  padding: 20px 40px;
+  font-size: 18px;
+  background-color: #282c34;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.user-table-button:hover {
+  background-color: #3a3f47;
+  transform: scale(1.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .table-container p {
@@ -80,8 +131,7 @@ button {
   line-height: 1.6;
 }
 
-.table-container button {
-  margin-top: 20px;
+.table-container > button {
   padding: 15px 20px;
   font-size: 16px;
   background-color: #282c34; /* Same as arrow-container */
@@ -95,7 +145,7 @@ button {
   gap: 10px;
 }
 
-.table-container button:hover {
+.table-container > button:hover {
   background-color: #3a3f47; /* Same hover color as arrow-container */
   transform: translateX(-5px); /* Slide left instead of right */
 }
@@ -109,7 +159,7 @@ button {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 20px 0;
+  margin: 1.5vw 0 1.5vw 0;
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   overflow: hidden;

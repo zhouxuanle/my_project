@@ -70,6 +70,8 @@ function HomePage() {
 function DataTablePage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showTable, setShowTable] = useState(true);
+  const [activeTable, setActiveTable] = useState('user'); // Track which table is active
 
   useEffect(() => {
     fetchUsers();
@@ -89,44 +91,91 @@ function DataTablePage() {
     }
   };
 
+  const handleTableSelect = (tableName) => {
+    setActiveTable(tableName);
+    setShowTable(true);
+  };
+
+  const tables = [
+    { name: 'user', label: 'User Table' },
+    { name: 'address', label: 'Address Table' },
+    { name: 'category', label: 'Category Table' },
+    { name: 'subcategory', label: 'Subcategory Table' },
+    { name: 'product', label: 'Product Table' },
+    { name: 'products_sku', label: 'Products SKU Table' },
+    { name: 'wishlist', label: 'Wishlist Table' },
+    { name: 'payment', label: 'Payment Table' },
+    { name: 'order', label: 'Order Table' },
+    { name: 'order_item', label: 'Order Item Table' },
+    { name: 'cart', label: 'Cart Table' }
+  ];
+
   return (
     <div className="App">
       <header className="App-header data-table-header">
         <h1>Data Table</h1>
         <div className="table-container">
-          {loading ? (
-            <p>Loading...</p>
-          ) : users.length > 0 ? (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Username</th>
-                  <th>Real Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Sex</th>
-                  <th>Age</th>
-                  <th>Job</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user, index) => (
-                  <tr key={index}>
-                    <td>{user.id}</td>
-                    <td>{user.user_name}</td>
-                    <td>{user.real_name}</td>
-                    <td>{user.email}</td>
-                    <td>{user.phone_number}</td>
-                    <td>{user.sex}</td>
-                    <td>{user.age}</td>
-                    <td>{user.job}</td>
+          {/* Table List Button - Top Left */}
+          {showTable && (
+            <button 
+              className="table-list-button"
+              onClick={() => setShowTable(false)}
+            >
+              Table List
+            </button>
+          )}
+
+          {/* All Table Buttons - Center */}
+          {!showTable && (
+            <div className="center-button-container">
+              {tables.map((table) => (
+                <button 
+                  key={table.name}
+                  className="user-table-button"
+                  onClick={() => handleTableSelect(table.name)}
+                >
+                  {table.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Data Table - Hidden by default */}
+          {showTable && (
+            loading ? (
+              <p>Loading...</p>
+            ) : users.length > 0 ? (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Real Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Sex</th>
+                    <th>Age</th>
+                    <th>Job</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p>No users found.</p>
+                </thead>
+                <tbody>
+                  {users.map((user, index) => (
+                    <tr key={index}>
+                      <td>{user.id}</td>
+                      <td>{user.user_name}</td>
+                      <td>{user.real_name}</td>
+                      <td>{user.email}</td>
+                      <td>{user.phone_number}</td>
+                      <td>{user.sex}</td>
+                      <td>{user.age}</td>
+                      <td>{user.job}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p>No users found.</p>
+            )
           )}
           <button onClick={() => window.history.back()}>← Back to Home</button>
         </div>

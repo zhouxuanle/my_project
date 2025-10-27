@@ -238,7 +238,7 @@ def get_users():
         connection = pymysql.connect(**config)
         with connection.cursor() as cursor:
             # 查询所有用户数据
-            select_users_query = "SELECT * FROM users ORDER BY created_at DESC LIMIT 1"
+            select_users_query = "SELECT * FROM users ORDER BY created_at DESC LIMIT 10"
             cursor.execute(select_users_query)
             users = cursor.fetchall()
             
