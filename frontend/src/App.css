@@ -1,234 +1,106 @@
-.App {
-  text-align: center;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
+@layer components {
+  .App {
+    @apply text-center;
+  }
 
-button {
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-}
+  .App-header {
+    @apply bg-app-dark min-h-screen flex flex-col items-center justify-center text-white;
+    font-size: calc(10px + 2vmin);
+  }
 
-.typewriter-text {
-  border-right: 2px solid white;
-  animation: blink 1s infinite;
+  .typewriter-text {
+    @apply border-r-2 border-white;
+    animation: blink 1s infinite;
+  }
+
+  .app-button {
+    @apply bg-app-dark text-white border border-white/10 rounded-lg cursor-pointer 
+           transition-all duration-300 ease-in-out mt-8 flex items-center gap-2.5 
+           px-5 py-4 hover:bg-app-hover;
+  }
+
+  .App-header > button,
+  .arrow-container {
+    @apply app-button hover:translate-x-1;
+  }
+
+  .arrow-icon {
+    @apply text-lg text-white transition-transform duration-300;
+  }
+
+  .table-container {
+    @apply mx-auto p-dynamic bg-white/10 rounded-[15px] backdrop-blur-lg 
+           relative min-h-[400px] w-[90%];
+  }
+
+  .table-container > button {
+    @apply app-button text-base hover:-translate-x-1;
+  }
+
+  .table-container p {
+    @apply my-4 text-lg leading-relaxed;
+  }
+
+  .center-button-container {
+    @apply grid gap-5 justify-items-center content-center min-h-[300px] w-full;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .user-table-button {
+    @apply app-button px-10 py-5 text-xl font-semibold 
+           hover:scale-110 hover:shadow-lg hover:shadow-black/30;
+  }
+
+  .data-table {
+    @apply w-full border-collapse my-dynamic bg-white/5 rounded-lg overflow-hidden;
+  }
+
+  .data-table thead {
+    @apply bg-white/10;
+  }
+
+  .data-table th {
+    @apply p-dynamic text-center font-bold uppercase tracking-wider 
+           border-b-2 border-white/20 text-dynamic-base;
+  }
+
+  .data-table td {
+    @apply p-dynamic border-b border-white/10 break-words text-dynamic-sm;
+  }
+
+  .data-table tbody tr {
+    @apply transition-colors duration-200 hover:bg-white/[0.08];
+  }
+
+  .data-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
+  /* Responsive table styles */
+  @screen sm {
+    .data-table th {
+      @apply p-3 text-xs;
+    }
+    .data-table td {
+      @apply p-2 text-[9px];
+    }
+  }
+
+  @screen md {
+    .data-table th {
+      @apply p-4 text-sm;
+    }
+    .data-table td {
+      @apply p-3 text-xs;
+    }
+  }
 }
 
 @keyframes blink {
   0%, 50% { border-color: white; }
   51%, 100% { border-color: transparent; }
-}
-
-/* Arrow Styles */
-.arrow-container {
-  margin-top: 30px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px 20px;
-  background-color: #282c34; /* Same as App-header background */
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.arrow-container:hover {
-  background-color: #3a3f47;
-  transform: translateX(5px);
-}
-
-.arrow-container span {
-  color: white;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.arrow-icon {
-  font-size: 18px;
-  color: white;
-  transition: transform 0.3s ease;
-}
-
-.arrow-container:hover .arrow-icon {
-  transform: translateX(3px);
-}
-
-/* Data Table Page Styles */
-.table-container {
-  margin: 0 auto;
-  padding: 1.5vw 1.5vw 1.5vw 1.5vw; /* Add top padding to make room for button */
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  backdrop-filter: blur(10px);
-  position: relative;
-  min-height: 400px;
-  width:90%;
-}
-
-/* Table List Button - Top Left */
-.table-list-button {
-  top: 20px;
-  left: 20px;
-  padding: 12px 20px;
-  font-size: 14px;
-  background-color: #282c34;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.table-list-button:hover {
-  background-color: #3a3f47;
-  transform: scale(1.05);
-}
-
-/* Center Button Container */
-.center-button-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  justify-items: center;
-  align-content: center;
-  min-height: 300px;
-  width: 100%;
-}
-
-/* User Table Button - Center */
-.user-table-button {
-  padding: 20px 40px;
-  font-size: 18px;
-  background-color: #282c34;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 600;
-}
-
-.user-table-button:hover {
-  background-color: #3a3f47;
-  transform: scale(1.1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-.table-container p {
-  margin: 15px 0;
-  font-size: 18px;
-  line-height: 1.6;
-}
-
-.table-container > button {
-  padding: 15px 20px;
-  font-size: 16px;
-  background-color: #282c34; /* Same as arrow-container */
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.1); /* Same border as arrow-container */
-  border-radius: 8px; /* Same border radius */
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.table-container > button:hover {
-  background-color: #3a3f47; /* Same hover color as arrow-container */
-  transform: translateX(-5px); /* Slide left instead of right */
-}
-
-/* Data Table Header - Move content to higher position */
-.data-table-header {
-  justify-content: flex-start !important;
-}
-
-/* Data Table Styles */
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 1.5vw 0 1.5vw 0;
-  background-color: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.data-table thead {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.data-table th {
-  padding: 1.2vw 1.5vw;
-  text-align: center;
-  font-weight: bold;
-  text-transform: uppercase;
-  font-size: clamp(12px, 1.2vw, 20px);
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-}
-
-.data-table td {
-  padding: 1vw 1.5vw;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  word-wrap: break-word;
-  font-size: clamp(11px, 1vw, 15px);
-}
-
-.data-table tbody tr {
-  transition: background-color 0.2s ease;
-}
-
-.data-table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.08);
-}
-
-.data-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* Responsive adjustments for different screen sizes */
-@media (max-width: 768px) {
-  .data-table th {
-    padding: 10px 12px;
-    font-size: 10px;
-  }
-  
-  .data-table td {
-    padding: 8px 12px;
-    font-size: 9px;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-  .data-table th {
-    padding: 11px 15px;
-    font-size: 13px;
-  }
-  
-  .data-table td {
-    padding: 9px 15px;
-    font-size: 12px;
-  }
-}
-
-@media (min-width: 1025px) {
-  .data-table th {
-    padding: 1.2vw 1.5vw;
-  }
-  
-  .data-table td {
-    padding: 1vw 1.5vw;
-  }
 }
