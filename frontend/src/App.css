@@ -19,40 +19,31 @@
 
   .app-button {
     @apply bg-app-dark text-white border border-white/10 rounded-lg cursor-pointer 
-           transition-all duration-300 ease-in-out mt-8 flex items-center gap-2.5 
-           px-5 py-4 hover:bg-app-hover;
+           transition-all duration-300 ease-in-out mt-8 mb-8 flex items-center gap-2.5 
+           px-5 py-4 hover:bg-app-hover hover:translate-x-1;
   }
 
   .App-header > button,
-  .arrow-container {
-    @apply app-button hover:translate-x-1;
-  }
-
-  .arrow-icon {
-    @apply text-lg text-white transition-transform duration-300;
+  .table-container > button,
+  .arrow-container,
+  .back-to-home-button {
+    @apply app-button 
   }
 
   .table-container {
-    @apply mx-auto p-dynamic bg-white/10 rounded-[15px] backdrop-blur-lg 
-           relative min-h-[400px] w-[90%];
-  }
-
-  .table-container > button {
-    @apply app-button text-base hover:-translate-x-1;
-  }
-
-  .table-container p {
-    @apply my-4 text-lg leading-relaxed;
+    @apply mx-auto p-dynamic bg-white/10 rounded-lg w-[90%];
   }
 
   .center-button-container {
-    @apply grid gap-5 justify-items-center content-center min-h-[300px] w-full;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+     @apply grid gap-5 justify-items-center content-center w-full;
+     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 
   .user-table-button {
-    @apply app-button px-10 py-5 text-xl font-semibold 
-           hover:scale-110 hover:shadow-lg hover:shadow-black/30;
+    /* Use a consistent height and full width so all buttons match size */
+    @apply app-button w-full h-16 text-base font-semibold 
+           hover:scale-110 hover:shadow-lg hover:shadow-black/30
+           flex justify-center items-center;
   }
 
   .data-table {

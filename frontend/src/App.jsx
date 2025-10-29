@@ -58,8 +58,7 @@ function HomePage() {
         {displayedText && <p className="typewriter-text">{displayedText}</p>}
         {showArrow && (
           <div className="arrow-container" onClick={() => navigate('/data-table')}>
-            <span>View Data Table</span>
-            <div className="arrow-icon">→</div>
+            <span>View Data Table →</span>
           </div>
         )}
       </header>
@@ -176,8 +175,9 @@ function DataTablePage() {
               <p>No users found.</p>
             )
           )}
-          <button onClick={() => window.history.back()}>← Back to Home</button>
+          
         </div>
+        <button className="back-to-home-button" onClick={() => window.history.back()}>← Back to Home</button>
       </header>
     </div>
   );
