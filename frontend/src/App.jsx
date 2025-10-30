@@ -29,7 +29,6 @@ function HomePage() {
     }
   };
 
-  useEffect(() => console.log(displayedText), [displayedText]);
 
   useEffect(() => {
     if (message) {
@@ -38,7 +37,6 @@ function HomePage() {
       const timer = setInterval(() => {
         if (index < message.length) {
           let message_letter = message[index]
-          console.log(message_letter,'----------');
           setDisplayedText(prev => prev + message_letter);
           index++;
         } else {
@@ -57,7 +55,7 @@ function HomePage() {
         <button onClick={handleClick}>generate data</button>
         {displayedText && <p className="typewriter-text">{displayedText}</p>}
         {showArrow && (
-          <div className="arrow-container" onClick={() => navigate('/data-table')}>
+          <div className="arrow-container" onClick={() => navigate('/user-table')}>
             <span>View Data Table →</span>
           </div>
         )}
@@ -67,32 +65,46 @@ function HomePage() {
 }
 
 function DataTablePage() {
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showTable, setShowTable] = useState(true);
+  const [tableData, setTableData] = useState([]);
   const [activeTable, setActiveTable] = useState('user'); // Track which table is active
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    fetchTableData(activeTable);
+  }, [activeTable]);
 
-  const fetchUsers = async () => {
+// Generic fetch function
+  const fetchTableData = async (tableName) => {
     try {
-      const response = await fetch('http://127.0.0.1:5000/get_users');
+      const response = await fetch(`http://127.0.0.1:5000/get_${tableName}`);
       const data = await response.json();
       if (data.success) {
-        setUsers(data.users);
+        setTableData(data[tableName]);
+      } else {
+        console.error('Error:', data.message);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error(`Error fetching ${tableName}:`, error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleTableSelect = (tableName) => {
-    setActiveTable(tableName);
+    // Clear the current table data and show loading state immediately
+    setTableData([]);
+    setLoading(true);
     setShowTable(true);
+
+    // If the user clicked the already-active table, activeTable won't change
+    // so useEffect won't re-run — manually refetch in that case.
+    if (tableName === activeTable) {
+      fetchTableData(tableName);
+    }
+
+    // Otherwise update activeTable; the useEffect will trigger a fetch
+    setActiveTable(tableName);
   };
 
   const tables = [
@@ -129,7 +141,7 @@ function DataTablePage() {
               {tables.map((table) => (
                 <button 
                   key={table.name}
-                  className="user-table-button"
+                  className="table-button"
                   onClick={() => handleTableSelect(table.name)}
                 >
                   {table.label}
@@ -142,37 +154,205 @@ function DataTablePage() {
           {showTable && (
             loading ? (
               <p>Loading...</p>
-            ) : users.length > 0 ? (
-              <table className="data-table">
+            ) : tableData.length > 0 ? (
+              <table className={`${activeTable}-table`}>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Username</th>
-                    <th>Real Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Sex</th>
-                    <th>Age</th>
-                    <th>Job</th>
+                    {activeTable === 'user' && (
+                      <>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Real Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Sex</th>
+                        <th>Age</th>
+                        <th>Job</th>
+                      </>
+                    )}
+                    {activeTable === 'address' && (
+                      <>
+                        <th>ID</th>
+                        <th>User ID</th>
+                        <th>Title</th>
+                        <th>Address Line</th>
+                        <th>Country</th>
+                        <th>City</th>
+                        <th>Postal Code</th>
+                      </>
+                    )}
+                    {activeTable === 'category' && (
+                      <>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                      </>
+                    )}
+                    {activeTable === 'subcategory' && (
+                      <>
+                        <th>ID</th>
+                        <th>Parent ID</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                      </>
+                    )}
+                    {activeTable === 'product' && (
+                      <>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Category ID</th>
+                      </>
+                    )}
+                    {activeTable === 'products_sku' && (
+                      <>
+                        <th>ID</th>
+                        <th>Product ID</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                      </>
+                    )}
+                    {activeTable === 'wishlist' && (
+                      <>
+                        <th>ID</th>
+                        <th>User ID</th>
+                        <th>Product SKU ID</th>
+                      </>
+                    )}
+                    {activeTable === 'payment' && (
+                      <>
+                        <th>ID</th>
+                        <th>Amount</th>
+                        <th>Provider</th>
+                        <th>Status</th>
+                      </>
+                    )}
+                    {activeTable === 'order' && (
+                      <>
+                        <th>ID</th>
+                        <th>User ID</th>
+                        <th>Payment ID</th>
+                      </>
+                    )}
+                    {activeTable === 'order_item' && (
+                      <>
+                        <th>ID</th>
+                        <th>Order ID</th>
+                        <th>Product SKU ID</th>
+                        <th>Quantity</th>
+                      </>
+                    )}
+                    {activeTable === 'cart' && (
+                      <>
+                        <th>ID</th>
+                        <th>Order ID</th>
+                        <th>Product SKU ID</th>
+                        <th>Quantity</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user, index) => (
+                  {tableData.map((data, index) => (
                     <tr key={index}>
-                      <td>{user.id}</td>
-                      <td>{user.user_name}</td>
-                      <td>{user.real_name}</td>
-                      <td>{user.email}</td>
-                      <td>{user.phone_number}</td>
-                      <td>{user.sex}</td>
-                      <td>{user.age}</td>
-                      <td>{user.job}</td>
+                      {activeTable === 'user' && (
+                        <>
+                          <td>{data.id}</td>
+                          <td>{data.user_name}</td>
+                          <td>{data.real_name}</td>
+                          <td>{data.email}</td>
+                          <td>{data.phone_number}</td>
+                          <td>{data.sex}</td>
+                          <td>{data.age}</td>
+                          <td>{data.job}</td>
+                        </>
+                      )}
+                      {activeTable === 'address' && (
+                        <>
+                          <td>{data.id}</td>
+                          <td>{data.user_id}</td>
+                          <td>{data.title}</td>
+                          <td>{data.address_line}</td>
+                          <td>{data.country}</td>
+                          <td>{data.city}</td>
+                          <td>{data.postal_code}</td>
+                        </>
+                      )}
+                      {activeTable === 'category' && (
+                        <>
+                          <td>{data.id}</td>
+                          <td>{data.name}</td>
+                          <td>{data.description}</td>
+                        </>
+                      )}
+                      {activeTable === 'subcategory' && (
+                        <>
+                          <td>{data.id}</td>
+                          <td>{data.parent_id}</td>
+                          <td>{data.name}</td>
+                          <td>{data.description}</td>
+                        </>
+                      )}
+                      {activeTable === 'product' && (
+                        <>
+                          <td>{data.id}</td>
+                          <td>{data.name}</td>
+                          <td>{data.description}</td>
+                          <td>{data.category_id}</td>
+                        </>
+                      )}
+                      {activeTable === 'products_sku' && (
+                        <>
+                          <td>{data.id}</td>
+                          <td>{data.product_id}</td>
+                          <td>{data.price}</td>
+                          <td>{data.quantity}</td>
+                        </>
+                      )}
+                      {activeTable === 'wishlist' && (
+                        <>
+                          <td>{data.id}</td>
+                          <td>{data.user_id}</td>
+                          <td>{data.products_sku_id}</td>
+                        </>
+                      )}
+                      {activeTable === 'payment' && (
+                        <>
+                          <td>{data.id}</td>
+                          <td>{data.amount}</td>
+                          <td>{data.provider}</td>
+                          <td>{data.status}</td>
+                        </>
+                      )}
+                      {activeTable === 'order' && (
+                        <>
+                          <td>{data.id}</td>
+                          <td>{data.user_id}</td>
+                          <td>{data.payment_id}</td>
+                        </>
+                      )}
+                      {activeTable === 'order_item' && (
+                        <>
+                          <td>{data.id}</td>
+                          <td>{data.order_id}</td>
+                          <td>{data.products_sku_id}</td>
+                          <td>{data.quantity}</td>
+                        </>
+                      )}
+                      {activeTable === 'cart' && (
+                        <>
+                          <td>{data.id}</td>
+                          <td>{data.order_id}</td>
+                          <td>{data.products_sku_id}</td>
+                          <td>{data.quantity}</td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
             ) : (
-              <p>No users found.</p>
+              <p>No {activeTable} data found.</p>
             )
           )}
           
@@ -188,7 +368,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/data-table" element={<DataTablePage />} />
+        <Route path="/user-table" element={<DataTablePage />} />
       </Routes>
     </Router>
   );

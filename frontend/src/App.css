@@ -27,65 +27,81 @@
   .table-container > button,
   .arrow-container,
   .back-to-home-button {
-    @apply app-button 
+    @apply app-button w-fit mx-auto
   }
 
   .table-container {
-    @apply mx-auto p-dynamic bg-white/10 rounded-lg w-[90%];
+    @apply mx-auto p-dynamic bg-white/10 rounded-lg w-[90%] min-h-[800px];
   }
 
   .center-button-container {
-     @apply grid gap-5 justify-items-center content-center w-full;
+     @apply grid gap-4 justify-items-center content-center w-full h-full;
      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 
-  .user-table-button {
+  .table-button {
     /* Use a consistent height and full width so all buttons match size */
     @apply app-button w-full h-16 text-base font-semibold 
            hover:scale-110 hover:shadow-lg hover:shadow-black/30
            flex justify-center items-center;
   }
 
-  .data-table {
-    @apply w-full border-collapse my-dynamic bg-white/5 rounded-lg overflow-hidden;
+  /* Base table styles for all data tables */
+  .data-table-base {
+    @apply w-full border-collapse my-dynamic bg-white/5 rounded-lg;
   }
 
-  .data-table thead {
+  .data-table-base thead {
     @apply bg-white/10;
   }
 
-  .data-table th {
+  .data-table-base th {
     @apply p-dynamic text-center font-bold uppercase tracking-wider 
            border-b-2 border-white/20 text-dynamic-base;
   }
 
-  .data-table td {
+  .data-table-base td {
     @apply p-dynamic border-b border-white/10 break-words text-dynamic-sm;
   }
 
-  .data-table tbody tr {
+  .data-table-base tbody tr {
     @apply transition-colors duration-200 hover:bg-white/[0.08];
   }
 
-  .data-table tbody tr:last-child td {
+  .data-table-base tbody tr:last-child td {
     @apply border-b-0;
   }
 
-  /* Responsive table styles */
+  /* Apply base styles to all table types */
+  .user-table,
+  .address-table,
+  .category-table,
+  .subcategory-table,
+  .product-table,
+  .products_sku-table,
+  .wishlist-table,
+  .payment-table,
+  .order-table,
+  .order_item-table,
+  .cart-table {
+    @apply data-table-base;
+  }
+
+  /* Responsive styles */
   @screen sm {
-    .data-table th {
+    .data-table-base th {
       @apply p-3 text-xs;
     }
-    .data-table td {
+    .data-table-base td {
       @apply p-2 text-[9px];
     }
   }
 
   @screen md {
-    .data-table th {
+    .data-table-base th {
       @apply p-4 text-sm;
     }
-    .data-table td {
+    .data-table-base td {
       @apply p-3 text-xs;
     }
   }

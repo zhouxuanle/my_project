@@ -231,21 +231,47 @@ def write_to_db():
         if 'connection' in locals():
             connection.close()
 
-@app.route('/get_users', methods=['GET'])
-def get_users():
+@app.route('/get_<table_name>', methods=['GET'])
+def get_table_data(table_name):
+    # Define a mapping of table names to their actual database table names
+    table_mapping = {
+        'user': 'users',
+        'address': 'addresses',
+        'category': 'categories',
+        'subcategory': 'sub_categories',
+        'product': 'products',
+        'products_sku': 'products_skus',
+        'wishlist': 'wishlist',
+        'payment': 'payment_details',
+        'order': 'order_details',
+        'order_item': 'order_item',
+        'cart': 'cart'
+    }
+    
     try:
+        # Check if the requested table exists in our mapping
+        if table_name not in table_mapping:
+            return jsonify({
+                'success': False,
+                'message': f'Invalid table name: {table_name}'
+            }), 400
+            
+        # Get the actual table name from the mapping
+        db_table_name = table_mapping[table_name]
+        
         # 建立连接
         connection = pymysql.connect(**config)
         with connection.cursor() as cursor:
-            # 查询所有用户数据
-            select_users_query = "SELECT * FROM users ORDER BY created_at DESC LIMIT 10"
-            cursor.execute(select_users_query)
-            users = cursor.fetchall()
+            # Query the requested table
+            select_query = f"SELECT * FROM {db_table_name} ORDER BY created_at DESC LIMIT 10"
+            cursor.execute(select_query)
+            data = cursor.fetchall()
             
             return jsonify({
                 'success': True,
-                'users': users
+                table_name: data
             })
+            
     except Exception as e:
         print("数据库操作失败:", str(e))
         return jsonify({
