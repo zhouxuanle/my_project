@@ -2,6 +2,48 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css'; // For basic styling
 
+// Left-side menu component: fixed vertical menu with two buttons
+function LeftMenu({ showTable, setShowTable }) {
+  const navigate = useNavigate();
+
+  return (
+    <nav className="left-menu" aria-label="Primary">
+      {/* Table List button (now matches the Home button shape) */}
+      <button
+        className="menu-small"
+        onClick={() => setShowTable(prev => !prev)}
+        aria-pressed={showTable}
+        title="Table List"
+      >
+        {/* Sheet/table SVG icon */}
+        <svg className="menu-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+          <rect x="3" y="4" width="18" height="16" rx="2" stroke="white" strokeWidth="1.4" fill="none" />
+          {/* horizontal header line */}
+          <path d="M3 8.5h18" stroke="white" strokeWidth="1.4" strokeLinecap="round" />
+          {/* vertical divider for columns */}
+          <path d="M9.5 8.5v11" stroke="white" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M15.5 8.5v11" stroke="white" strokeWidth="1.4" strokeLinecap="round" />
+          {/* a couple of subtle row lines */}
+          <path d="M3 13.5h18" stroke="white" strokeWidth="1" strokeLinecap="round" opacity="0.9" />
+        </svg>
+      </button>
+  <div className="menu-label">Tables</div>
+
+      {/* Smaller home button */}
+      <button
+        className="menu-small"
+        onClick={() => navigate('/')}
+        title="Back to Home"
+      >
+        <svg className="menu-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+          <path d="M3 10.5L12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10.5z" fill="white" />
+        </svg>
+      </button>
+      <div className="menu-label">Home</div>
+    </nav>
+  );
+}
+
 function HomePage() {
   const [message, setMessage] = useState('');
   const [displayedText, setDisplayedText] = useState('');
@@ -74,7 +116,7 @@ function DataTablePage() {
     fetchTableData(activeTable);
   }, [activeTable]);
 
-// Generic fetch function
+  // Generic fetch function
   const fetchTableData = async (tableName) => {
     try {
       const response = await fetch(`http://127.0.0.1:5000/get_${tableName}`);
@@ -122,19 +164,14 @@ function DataTablePage() {
   ];
 
   return (
-    <div className="App">
+    <div className="App app-with-left-menu">
       <header className="App-header">
         <h1>Data Table</h1>
-        <div className="table-container">
-          {/* Table List Button - Top Left */}
-          {showTable && (
-            <button 
-              onClick={() => setShowTable(false)}
-            >
-              Table List
-            </button>
-          )}
 
+        {/* Left fixed menu (contains Back to Home and Table List) */}
+        <LeftMenu showTable={showTable} setShowTable={setShowTable} />
+
+        <div className="table-container">
           {/* All Table Buttons - Center */}
           {!showTable && (
             <div className="center-button-container">
@@ -357,7 +394,7 @@ function DataTablePage() {
           )}
           
         </div>
-        <button className="back-to-home-button" onClick={() => window.history.back()}>← Back to Home</button>
+        {/* Back-to-home button moved into left menu; removed duplicate button here. */}
       </header>
     </div>
   );

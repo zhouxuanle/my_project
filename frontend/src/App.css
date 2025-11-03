@@ -107,6 +107,47 @@
   }
 }
 
+/* Left fixed vertical menu styles */
+.left-menu {
+  @apply fixed left-4 top-1/4 z-40 flex flex-col items-center gap-3;
+}
+
+/* Big circular primary action (Table List) */
+.menu-circle {
+  @apply bg-gradient-to-b from-purple-500 to-purple-700 text-white rounded-full
+         w-16 h-16 flex items-center justify-center shadow-lg shadow-purple-400/30
+         transition-transform duration-200 hover:scale-105;
+}
+
+.menu-small {
+  @apply bg-white/10 text-white rounded-full w-12 h-12 flex items-center justify-center
+         border border-white/10 shadow-sm transition-transform transition-colors duration-200
+         transform-gpu hover:scale-105 hover:bg-white/20 hover:shadow-md;
+
+  /* Accessible focus state for keyboard users */
+  &:focus-visible {
+    @apply outline-none ring-2 ring-purple-400/60;
+  }
+}
+
+.menu-icon { @apply block }
+
+.menu-label {
+  @apply text-xs text-white/80 mt-1 select-none;
+}
+
+/* Shift header content to avoid overlap with fixed menu */
+.app-with-left-menu .App-header {
+  @apply pl-20 md:pl-28;
+}
+
+@screen md {
+  .left-menu { @apply left-6 }
+  .menu-circle { @apply w-20 h-20 }
+  .menu-small { @apply w-14 h-14 }
+  .menu-label { @apply text-sm }
+}
+
 @keyframes blink {
   0%, 50% { border-color: white; }
   51%, 100% { border-color: transparent; }
