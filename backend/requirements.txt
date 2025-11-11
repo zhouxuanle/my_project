@@ -1,0 +1,6 @@
+Flask>=2.3.0
+Flask-CORS>=4.0.0
+PyMySQL>=1.1.0
+DBUtils>=3.0.3
+Faker>=19.0.0
+faker-commerce>=1.0.3
