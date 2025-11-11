@@ -5,7 +5,7 @@ from faker import Faker
 from faker_commerce import Provider as CommerceProvider
 from random import randint
 
-# Initialize Faker with a locale
+# Initialize Faker with a locale (singleton pattern for better performance)
 fake = Faker('en_US')
 
 # Add the commerce provider to the faker instance
@@ -22,8 +22,8 @@ class DataGenerator:
     def generate_user_data(self):
         profile = fake.profile()
         birth_of_date = fake.date_of_birth(minimum_age=18, maximum_age=75)
-        current_year = int(datetime.now().year)
-        age = current_year - int(birth_of_date.year)
+        current_year = datetime.now().year
+        age = current_year - birth_of_date.year
         user_id = f"user_id-{uuid.uuid4()}"
         password_default = fake.password()
         user_info_data = {
@@ -52,9 +52,8 @@ class DataGenerator:
             "Shipping Address",
             "Vacation Home"
         ]
-        street_address = fake.street_address()
-        secondary_address = fake.secondary_address()
-        full_address_line = f"{street_address} {secondary_address}"
+        # Combine address generation in fewer calls
+        full_address_line = f"{fake.street_address()} {fake.secondary_address()}"
         address_id = f"address_id-{uuid.uuid4()}"
         address_data = {
             "id": address_id,

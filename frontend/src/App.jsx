@@ -1,6 +1,65 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css'; // For basic styling
+
+// Table configuration to eliminate code duplication
+const TABLE_CONFIGS = {
+  user: {
+    label: 'User Table',
+    columns: ['ID', 'Username', 'Real Name', 'Email', 'Phone', 'Sex', 'Age', 'Job'],
+    fields: ['id', 'user_name', 'real_name', 'email', 'phone_number', 'sex', 'age', 'job']
+  },
+  address: {
+    label: 'Address Table',
+    columns: ['ID', 'User ID', 'Title', 'Address Line', 'Country', 'City', 'Postal Code'],
+    fields: ['id', 'user_id', 'title', 'address_line', 'country', 'city', 'postal_code']
+  },
+  category: {
+    label: 'Category Table',
+    columns: ['ID', 'Name', 'Description'],
+    fields: ['id', 'name', 'description']
+  },
+  subcategory: {
+    label: 'Subcategory Table',
+    columns: ['ID', 'Parent ID', 'Name', 'Description'],
+    fields: ['id', 'parent_id', 'name', 'description']
+  },
+  product: {
+    label: 'Product Table',
+    columns: ['ID', 'Name', 'Description', 'Category ID'],
+    fields: ['id', 'name', 'description', 'category_id']
+  },
+  products_sku: {
+    label: 'Products SKU Table',
+    columns: ['ID', 'Product ID', 'Price', 'Stock'],
+    fields: ['id', 'product_id', 'price', 'stock']
+  },
+  wishlist: {
+    label: 'Wishlist Table',
+    columns: ['ID', 'User ID', 'Product SKU ID'],
+    fields: ['id', 'user_id', 'products_sku_id']
+  },
+  payment: {
+    label: 'Payment Table',
+    columns: ['ID', 'Amount', 'Provider', 'Status'],
+    fields: ['id', 'amount', 'provider', 'status']
+  },
+  order: {
+    label: 'Order Table',
+    columns: ['ID', 'User ID', 'Payment ID'],
+    fields: ['id', 'user_id', 'payment_id']
+  },
+  order_item: {
+    label: 'Order Item Table',
+    columns: ['ID', 'Order ID', 'Product SKU ID', 'Quantity'],
+    fields: ['id', 'order_id', 'products_sku_id', 'quantity']
+  },
+  cart: {
+    label: 'Cart Table',
+    columns: ['ID', 'Order ID', 'Product SKU ID', 'Quantity'],
+    fields: ['id', 'order_id', 'products_sku_id', 'quantity']
+  }
+};
 
 // Left-side menu component: fixed vertical menu with two buttons
 function LeftMenu({ showTable, setShowTable }) {
@@ -50,7 +109,7 @@ function HomePage() {
   const [showArrow, setShowArrow] = useState(false);
   const navigate = useNavigate();
 
-  const handleClick = async () => {
+  const handleClick = useCallback(async () => {
     setShowArrow(false); // Hide arrow when starting new request
     
     try {
@@ -61,7 +120,7 @@ function HomePage() {
       setMessage(data.message);
       
       // Show arrow only if no error occurred
-      if (data.success == true) {
+      if (data.success === true) {
         setShowArrow(true);
       }
     } catch (error) {
@@ -69,7 +128,7 @@ function HomePage() {
       setMessage('Error fetching message.');
       setShowArrow(false);
     }
-  };
+  }, []);
 
 
   useEffect(() => {
@@ -78,8 +137,7 @@ function HomePage() {
       let index = 0;
       const timer = setInterval(() => {
         if (index < message.length) {
-          let message_letter = message[index]
-          setDisplayedText(prev => prev + message_letter);
+          setDisplayedText(prev => prev + message[index]);
           index++;
         } else {
           clearInterval(timer);
@@ -112,12 +170,11 @@ function DataTablePage() {
   const [tableData, setTableData] = useState([]);
   const [activeTable, setActiveTable] = useState('user'); // Track which table is active
 
-  useEffect(() => {
-    fetchTableData(activeTable);
-  }, [activeTable]);
+  // Memoize table config for current active table
+  const currentTableConfig = useMemo(() => TABLE_CONFIGS[activeTable], [activeTable]);
 
-  // Generic fetch function
-  const fetchTableData = async (tableName) => {
+  // Generic fetch function with useCallback for optimization
+  const fetchTableData = useCallback(async (tableName) => {
     try {
       const response = await fetch(`http://127.0.0.1:5000/get_${tableName}`);
       const data = await response.json();
@@ -131,9 +188,13 @@ function DataTablePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleTableSelect = (tableName) => {
+  useEffect(() => {
+    fetchTableData(activeTable);
+  }, [activeTable, fetchTableData]);
+
+  const handleTableSelect = useCallback((tableName) => {
     // Clear the current table data and show loading state immediately
     setTableData([]);
     setLoading(true);
@@ -147,21 +208,16 @@ function DataTablePage() {
 
     // Otherwise update activeTable; the useEffect will trigger a fetch
     setActiveTable(tableName);
-  };
+  }, [activeTable, fetchTableData]);
 
-  const tables = [
-    { name: 'user', label: 'User Table' },
-    { name: 'address', label: 'Address Table' },
-    { name: 'category', label: 'Category Table' },
-    { name: 'subcategory', label: 'Subcategory Table' },
-    { name: 'product', label: 'Product Table' },
-    { name: 'products_sku', label: 'Products SKU Table' },
-    { name: 'wishlist', label: 'Wishlist Table' },
-    { name: 'payment', label: 'Payment Table' },
-    { name: 'order', label: 'Order Table' },
-    { name: 'order_item', label: 'Order Item Table' },
-    { name: 'cart', label: 'Cart Table' }
-  ];
+  // Memoize tables array from config
+  const tables = useMemo(() => 
+    Object.entries(TABLE_CONFIGS).map(([name, config]) => ({
+      name,
+      label: config.label
+    })),
+    []
+  );
 
   return (
     <div className="App app-with-left-menu">
@@ -195,195 +251,17 @@ function DataTablePage() {
               <table className={`${activeTable}-table`}>
                 <thead>
                   <tr>
-                    {activeTable === 'user' && (
-                      <>
-                        <th>ID</th>
-                        <th>Username</th>
-                        <th>Real Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Sex</th>
-                        <th>Age</th>
-                        <th>Job</th>
-                      </>
-                    )}
-                    {activeTable === 'address' && (
-                      <>
-                        <th>ID</th>
-                        <th>User ID</th>
-                        <th>Title</th>
-                        <th>Address Line</th>
-                        <th>Country</th>
-                        <th>City</th>
-                        <th>Postal Code</th>
-                      </>
-                    )}
-                    {activeTable === 'category' && (
-                      <>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Description</th>
-                      </>
-                    )}
-                    {activeTable === 'subcategory' && (
-                      <>
-                        <th>ID</th>
-                        <th>Parent ID</th>
-                        <th>Name</th>
-                        <th>Description</th>
-                      </>
-                    )}
-                    {activeTable === 'product' && (
-                      <>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Category ID</th>
-                      </>
-                    )}
-                    {activeTable === 'products_sku' && (
-                      <>
-                        <th>ID</th>
-                        <th>Product ID</th>
-                        <th>Price</th>
-                        <th>Stock</th>
-                      </>
-                    )}
-                    {activeTable === 'wishlist' && (
-                      <>
-                        <th>ID</th>
-                        <th>User ID</th>
-                        <th>Product SKU ID</th>
-                      </>
-                    )}
-                    {activeTable === 'payment' && (
-                      <>
-                        <th>ID</th>
-                        <th>Amount</th>
-                        <th>Provider</th>
-                        <th>Status</th>
-                      </>
-                    )}
-                    {activeTable === 'order' && (
-                      <>
-                        <th>ID</th>
-                        <th>User ID</th>
-                        <th>Payment ID</th>
-                      </>
-                    )}
-                    {activeTable === 'order_item' && (
-                      <>
-                        <th>ID</th>
-                        <th>Order ID</th>
-                        <th>Product SKU ID</th>
-                        <th>Quantity</th>
-                      </>
-                    )}
-                    {activeTable === 'cart' && (
-                      <>
-                        <th>ID</th>
-                        <th>Order ID</th>
-                        <th>Product SKU ID</th>
-                        <th>Quantity</th>
-                      </>
-                    )}
+                    {currentTableConfig.columns.map((column, idx) => (
+                      <th key={idx}>{column}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {tableData.map((data, index) => (
                     <tr key={index}>
-                      {activeTable === 'user' && (
-                        <>
-                          <td>{data.id}</td>
-                          <td>{data.user_name}</td>
-                          <td>{data.real_name}</td>
-                          <td>{data.email}</td>
-                          <td>{data.phone_number}</td>
-                          <td>{data.sex}</td>
-                          <td>{data.age}</td>
-                          <td>{data.job}</td>
-                        </>
-                      )}
-                      {activeTable === 'address' && (
-                        <>
-                          <td>{data.id}</td>
-                          <td>{data.user_id}</td>
-                          <td>{data.title}</td>
-                          <td>{data.address_line}</td>
-                          <td>{data.country}</td>
-                          <td>{data.city}</td>
-                          <td>{data.postal_code}</td>
-                        </>
-                      )}
-                      {activeTable === 'category' && (
-                        <>
-                          <td>{data.id}</td>
-                          <td>{data.name}</td>
-                          <td>{data.description}</td>
-                        </>
-                      )}
-                      {activeTable === 'subcategory' && (
-                        <>
-                          <td>{data.id}</td>
-                          <td>{data.parent_id}</td>
-                          <td>{data.name}</td>
-                          <td>{data.description}</td>
-                        </>
-                      )}
-                      {activeTable === 'product' && (
-                        <>
-                          <td>{data.id}</td>
-                          <td>{data.name}</td>
-                          <td>{data.description}</td>
-                          <td>{data.category_id}</td>
-                        </>
-                      )}
-                      {activeTable === 'products_sku' && (
-                        <>
-                          <td>{data.id}</td>
-                          <td>{data.product_id}</td>
-                          <td>{data.price}</td>
-                          <td>{data.quantity}</td>
-                        </>
-                      )}
-                      {activeTable === 'wishlist' && (
-                        <>
-                          <td>{data.id}</td>
-                          <td>{data.user_id}</td>
-                          <td>{data.products_sku_id}</td>
-                        </>
-                      )}
-                      {activeTable === 'payment' && (
-                        <>
-                          <td>{data.id}</td>
-                          <td>{data.amount}</td>
-                          <td>{data.provider}</td>
-                          <td>{data.status}</td>
-                        </>
-                      )}
-                      {activeTable === 'order' && (
-                        <>
-                          <td>{data.id}</td>
-                          <td>{data.user_id}</td>
-                          <td>{data.payment_id}</td>
-                        </>
-                      )}
-                      {activeTable === 'order_item' && (
-                        <>
-                          <td>{data.id}</td>
-                          <td>{data.order_id}</td>
-                          <td>{data.products_sku_id}</td>
-                          <td>{data.quantity}</td>
-                        </>
-                      )}
-                      {activeTable === 'cart' && (
-                        <>
-                          <td>{data.id}</td>
-                          <td>{data.order_id}</td>
-                          <td>{data.products_sku_id}</td>
-                          <td>{data.quantity}</td>
-                        </>
-                      )}
+                      {currentTableConfig.fields.map((field, idx) => (
+                        <td key={idx}>{data[field]}</td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
