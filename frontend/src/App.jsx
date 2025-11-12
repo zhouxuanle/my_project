@@ -1,4 +1,16 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+// Responsive hook to get window width
+function useWindowWidth() {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    function handleResize() {
+      setWidth(window.innerWidth);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return width;
+}
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import './App.css'; // For basic styling
 
@@ -137,7 +149,8 @@ function HomePage() {
       let index = 0;
       const timer = setInterval(() => {
         if (index < message.length) {
-          setDisplayedText(prev => prev + message[index]);
+          let message_letter = message[index]
+          setDisplayedText(prev => prev + message_letter);
           index++;
         } else {
           clearInterval(timer);
@@ -173,6 +186,20 @@ function DataTablePage() {
   // Memoize table config for current active table
   const currentTableConfig = useMemo(() => TABLE_CONFIGS[activeTable], [activeTable]);
 
+  // Responsive: determine how many columns to show based on window width
+  const windowWidth = useWindowWidth();
+  // You can adjust these breakpoints and min columns as needed
+  let maxColumns = currentTableConfig.columns.length;
+  if (windowWidth < 500) {
+    maxColumns = Math.max(2, maxColumns - 5); // show only 2 columns on very small screens
+  } else if (windowWidth < 700) {
+    maxColumns = Math.max(3, maxColumns - 4); // show 3 columns
+  } else if (windowWidth < 900) {
+    maxColumns = Math.max(4, maxColumns - 3); // show 4 columns
+  } // else show all columns
+  const visibleColumns = currentTableConfig.columns.slice(0, maxColumns);
+  const visibleFields = currentTableConfig.fields.slice(0, maxColumns);
+
   // Generic fetch function with useCallback for optimization
   const fetchTableData = useCallback(async (tableName) => {
     try {
@@ -192,7 +219,7 @@ function DataTablePage() {
 
   useEffect(() => {
     fetchTableData(activeTable);
-  }, [activeTable, fetchTableData]);
+  }, [activeTable]);
 
   const handleTableSelect = useCallback((tableName) => {
     // Clear the current table data and show loading state immediately
@@ -251,7 +278,7 @@ function DataTablePage() {
               <table className={`${activeTable}-table`}>
                 <thead>
                   <tr>
-                    {currentTableConfig.columns.map((column, idx) => (
+                    {visibleColumns.map((column, idx) => (
                       <th key={idx}>{column}</th>
                     ))}
                   </tr>
@@ -259,7 +286,7 @@ function DataTablePage() {
                 <tbody>
                   {tableData.map((data, index) => (
                     <tr key={index}>
-                      {currentTableConfig.fields.map((field, idx) => (
+                      {visibleFields.map((field, idx) => (
                         <td key={idx}>{data[field]}</td>
                       ))}
                     </tr>

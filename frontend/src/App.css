@@ -55,10 +55,10 @@
     @apply bg-white/10;
   }
 
-  .data-table-base th {
-    @apply p-dynamic text-center font-bold uppercase tracking-wider 
-           border-b-2 border-white/20 text-dynamic-base;
+  .data-table-base td {
+    @apply p-dynamic border-b border-white/10 text-dynamic-sm truncate whitespace-nowrap max-w-[80px];
   }
+  
 
   .data-table-base td {
     @apply p-dynamic border-b border-white/10 break-words text-dynamic-sm;
