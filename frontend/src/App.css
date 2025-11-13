@@ -1,3 +1,11 @@
+.blinking-arrow {
+  animation: blink-arrow 1.2s infinite;
+}
+
+@keyframes blink-arrow {
+  0%, 100% { opacity: 1; transform: translateY(0); }
+  50% { opacity: 0.4; transform: translateY(10px); }
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -32,6 +40,16 @@
 
   .table-container {
     @apply mx-auto p-dynamic bg-white/10 rounded-lg w-[90%] min-h-[800px];
+    overflow: hidden;
+    max-height: calc(100vh - 100px);
+  }
+  /* Blinking arrow absolutely positioned at the bottom of the table-container */
+  .blinking-arrow-below {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+    margin-bottom: 0;
+    width: 100%;
   }
 
   .center-button-container {
@@ -42,8 +60,8 @@
   .table-button {
     /* Use a consistent height and full width so all buttons match size */
     @apply app-button w-full h-16 text-base font-semibold 
-           hover:scale-110 hover:shadow-lg hover:shadow-black/30
-           flex justify-center items-center;
+      hover:scale-110 hover:shadow-lg hover:shadow-black/30
+      flex justify-center items-center m-0;
   }
 
   /* Base table styles for all data tables */

@@ -18,58 +18,58 @@ import './App.css'; // For basic styling
 const TABLE_CONFIGS = {
   user: {
     label: 'User Table',
-    columns: ['ID', 'Username', 'Real Name', 'Email', 'Phone', 'Sex', 'Age', 'Job'],
-    fields: ['id', 'user_name', 'real_name', 'email', 'phone_number', 'sex', 'age', 'job']
+    columns: ['ID', 'Username', 'Real Name', 'Email', 'Phone', 'Sex', 'Age', 'Job', 'created_at'],
+    fields: ['id', 'user_name', 'real_name', 'email', 'phone_number', 'sex', 'age', 'job', 'created_at']
   },
   address: {
     label: 'Address Table',
-    columns: ['ID', 'User ID', 'Title', 'Address Line', 'Country', 'City', 'Postal Code'],
-    fields: ['id', 'user_id', 'title', 'address_line', 'country', 'city', 'postal_code']
+    columns: ['ID', 'User ID', 'Title', 'Address Line', 'Country', 'City', 'Postal Code', 'created_at'],
+    fields: ['id', 'user_id', 'title', 'address_line', 'country', 'city', 'postal_code', 'created_at']
   },
   category: {
     label: 'Category Table',
-    columns: ['ID', 'Name', 'Description'],
-    fields: ['id', 'name', 'description']
+    columns: ['ID', 'Name', 'Description', 'created_at'],
+    fields: ['id', 'name', 'description', 'created_at']
   },
   subcategory: {
     label: 'Subcategory Table',
-    columns: ['ID', 'Parent ID', 'Name', 'Description'],
-    fields: ['id', 'parent_id', 'name', 'description']
+    columns: ['ID', 'Parent ID', 'Name', 'Description', 'created_at'],
+    fields: ['id', 'parent_id', 'name', 'description', 'created_at']
   },
   product: {
     label: 'Product Table',
-    columns: ['ID', 'Name', 'Description', 'Category ID'],
-    fields: ['id', 'name', 'description', 'category_id']
+    columns: ['ID', 'Name', 'Description', 'Category ID', 'created_at'],
+    fields: ['id', 'name', 'description', 'category_id', 'created_at']
   },
   products_sku: {
     label: 'Products SKU Table',
-    columns: ['ID', 'Product ID', 'Price', 'Stock'],
-    fields: ['id', 'product_id', 'price', 'stock']
+    columns: ['ID', 'Product ID', 'Price', 'Stock', 'created_at'],
+    fields: ['id', 'product_id', 'price', 'stock', 'created_at']
   },
   wishlist: {
     label: 'Wishlist Table',
-    columns: ['ID', 'User ID', 'Product SKU ID'],
-    fields: ['id', 'user_id', 'products_sku_id']
+    columns: ['ID', 'User ID', 'Product SKU ID', 'created_at'],
+    fields: ['id', 'user_id', 'products_sku_id', 'created_at']
   },
   payment: {
     label: 'Payment Table',
-    columns: ['ID', 'Amount', 'Provider', 'Status'],
-    fields: ['id', 'amount', 'provider', 'status']
+    columns: ['ID', 'Amount', 'Provider', 'Status', 'created_at'],
+    fields: ['id', 'amount', 'provider', 'status', 'created_at']
   },
   order: {
     label: 'Order Table',
-    columns: ['ID', 'User ID', 'Payment ID'],
-    fields: ['id', 'user_id', 'payment_id']
+    columns: ['ID', 'User ID', 'Payment ID', 'created_at'],
+    fields: ['id', 'user_id', 'payment_id', 'created_at']
   },
   order_item: {
     label: 'Order Item Table',
-    columns: ['ID', 'Order ID', 'Product SKU ID', 'Quantity'],
-    fields: ['id', 'order_id', 'products_sku_id', 'quantity']
+    columns: ['ID', 'Order ID', 'Product SKU ID', 'Quantity', 'created_at'],
+    fields: ['id', 'order_id', 'products_sku_id', 'quantity', 'created_at']
   },
   cart: {
     label: 'Cart Table',
-    columns: ['ID', 'Order ID', 'Product SKU ID', 'Quantity'],
-    fields: ['id', 'order_id', 'products_sku_id', 'quantity']
+    columns: ['ID', 'Order ID', 'Product SKU ID', 'Quantity', 'created_at'],
+    fields: ['id', 'order_id', 'products_sku_id', 'quantity', 'created_at']
   }
 };
 
@@ -190,15 +190,31 @@ function DataTablePage() {
   const windowWidth = useWindowWidth();
   // You can adjust these breakpoints and min columns as needed
   let maxColumns = currentTableConfig.columns.length;
-  if (windowWidth < 500) {
-    maxColumns = Math.max(2, maxColumns - 5); // show only 2 columns on very small screens
+  if (windowWidth < 600) {
+    maxColumns = Math.max(2, maxColumns - 6); // show only 2 columns on very small screens
   } else if (windowWidth < 700) {
     maxColumns = Math.max(3, maxColumns - 4); // show 3 columns
   } else if (windowWidth < 900) {
     maxColumns = Math.max(4, maxColumns - 3); // show 4 columns
   } // else show all columns
-  const visibleColumns = currentTableConfig.columns.slice(0, maxColumns);
-  const visibleFields = currentTableConfig.fields.slice(0, maxColumns);
+
+  // Always keep 'created_at' as the rightmost column if it exists
+  const colIdx = currentTableConfig.fields.indexOf('created_at');
+
+  let visibleColumns, visibleFields;
+  if (colIdx !== -1) {
+    // Remove 'created_at' from the list if present
+    const columnsWithoutCreatedAt = currentTableConfig.columns.filter((_, idx) => idx !== colIdx);
+    const fieldsWithoutCreatedAt = currentTableConfig.fields.filter((f) => f !== 'created_at');
+    // Show up to maxColumns-1 columns, then add 'created_at' at the end
+    const slicedColumns = columnsWithoutCreatedAt.slice(0, Math.max(1, maxColumns - 1));
+    const slicedFields = fieldsWithoutCreatedAt.slice(0, Math.max(1, maxColumns - 1));
+    visibleColumns = [...slicedColumns, currentTableConfig.columns[colIdx]];
+    visibleFields = [...slicedFields, 'created_at'];
+  } else {
+    visibleColumns = currentTableConfig.columns.slice(0, maxColumns);
+    visibleFields = currentTableConfig.fields.slice(0, maxColumns);
+  }
 
   // Generic fetch function with useCallback for optimization
   const fetchTableData = useCallback(async (tableName) => {
@@ -246,6 +262,16 @@ function DataTablePage() {
     []
   );
 
+  // Ref for the empty page
+  const emptyPageRef = React.useRef(null);
+
+  // Handler to scroll to empty page
+  const handleArrowClick = () => {
+    if (emptyPageRef.current) {
+      emptyPageRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="App app-with-left-menu">
       <header className="App-header">
@@ -253,6 +279,7 @@ function DataTablePage() {
 
         {/* Left fixed menu (contains Back to Home and Table List) */}
         <LeftMenu showTable={showTable} setShowTable={setShowTable} />
+
 
         <div className="table-container">
           {/* All Table Buttons - Center */}
@@ -297,8 +324,24 @@ function DataTablePage() {
               <p>No {activeTable} data found.</p>
             )
           )}
-          
         </div>
+
+        {/* Blinking down arrow below the table-container */}
+        <div className="blinking-arrow-below">
+          <button
+            className="blinking-arrow"
+            onClick={handleArrowClick}
+            aria-label="Scroll to next section"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', outline: 'none' }}
+          >
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Empty page below table-container */}
+        <div ref={emptyPageRef} className="empty-page" style={{ minHeight: '800px' }}></div>
         {/* Back-to-home button moved into left menu; removed duplicate button here. */}
       </header>
     </div>

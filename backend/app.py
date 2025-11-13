@@ -61,6 +61,7 @@ def write_to_db():
         cart = gd.generate_cart_data(products_sku,order)
         
         with connection.cursor() as cursor:
+            print(user['age'],'---',user['create_time'])
             # Use executemany for batch inserts where possible
             # For single row inserts, we can still optimize by preparing all queries
             
@@ -160,7 +161,7 @@ def get_table_data(table_name):
         with connection.cursor() as cursor:
             # Use parameterized query to prevent SQL injection
             # Since table names cannot be parameterized, we validate against whitelist above
-            select_query = f"SELECT * FROM {db_table_name} ORDER BY created_at DESC LIMIT 10"
+            select_query = f"SELECT * FROM {db_table_name} ORDER BY created_at DESC LIMIT 20"
             cursor.execute(select_query)
             data = cursor.fetchall()
             
