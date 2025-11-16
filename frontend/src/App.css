@@ -39,7 +39,7 @@
   }
 
   .table-container {
-    @apply mx-auto p-dynamic bg-white/10 rounded-lg w-[90%] min-h-[800px];
+    @apply mx-auto p-dynamic bg-white/10 rounded-lg w-[90%];
     overflow: hidden;
     max-height: calc(100vh - 100px);
   }
@@ -53,8 +53,8 @@
   }
 
   .center-button-container {
-     @apply grid gap-4 justify-items-center content-center w-full h-full;
-     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  @apply grid gap-4 justify-items-center content-center w-[80%] h-full my-8;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 
   .table-button {

@@ -119,31 +119,86 @@ function HomePage() {
   const [message, setMessage] = useState('');
   const [displayedText, setDisplayedText] = useState('');
   const [showArrow, setShowArrow] = useState(false);
+  const [dataCount, setDataCount] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const navigate = useNavigate();
+  const [genTime, setGenTime] = useState(0);
+  const [commitTime, setCommitTime] = useState(0);
+  const [finalGenTime, setFinalGenTime] = useState(null);
+  const [finalCommitTime, setFinalCommitTime] = useState(null);
+  const [timingPhase, setTimingPhase] = useState('idle'); // 'idle' | 'generating' | 'committing' | 'done'
+  const genTimerRef = React.useRef();
+  const commitTimerRef = React.useRef();
 
   const handleClick = useCallback(async () => {
-    setShowArrow(false); // Hide arrow when starting new request
-    
+    setShowArrow(false);
+    setLoading(true);
+    setMessage("");
+    setProgress(0);
+    setGenTime(0);
+    setCommitTime(0);
+    setFinalGenTime(null);
+    setFinalCommitTime(null);
+    setTimingPhase('generating');
+    // Start generation timer
+    if (genTimerRef.current) clearInterval(genTimerRef.current);
+    if (commitTimerRef.current) clearInterval(commitTimerRef.current);
+    let genStart = Date.now();
+    genTimerRef.current = setInterval(() => {
+      setGenTime(((Date.now() - genStart) / 1000));
+    }, 50);
+    // Simulate progress bar
+    const fakeProgress = async () => {
+      for (let i = 1; i <= dataCount; i++) {
+        setProgress(i);
+        if (i === dataCount) {
+          // Stop gen timer when progress reaches 100
+          if (genTimerRef.current) clearInterval(genTimerRef.current);
+          setTimingPhase('committing');
+          // Start commit timer
+          let commitStart = Date.now();
+          commitTimerRef.current = setInterval(() => {
+            setCommitTime(((Date.now() - commitStart) / 1000));
+          }, 50);
+        }
+        await new Promise(res => setTimeout(res, Math.max(10, 1000 / dataCount)));
+      }
+    };
+    fakeProgress();
     try {
-      const response = await fetch('http://127.0.0.1:5000/write_to_db',{
-        method: 'POST'
-      }); // Flask default port
+      const response = await fetch('http://127.0.0.1:5000/write_to_db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dataCount })
+      });
       const data = await response.json();
+      // Set final times from backend for accuracy
+      setFinalGenTime(data.generation_time || genTime);
+      setFinalCommitTime(data.commit_time || commitTime);
+      setTimingPhase('done');
+      // Stop commit timer
+      if (commitTimerRef.current) clearInterval(commitTimerRef.current);
       setMessage(data.message);
-      
-      // Show arrow only if no error occurred
+      // When backend responds, immediately set genTime to backend's value for display
+      setGenTime(data.generation_time || genTime);
       if (data.success === true) {
         setShowArrow(true);
       }
     } catch (error) {
+      if (genTimerRef.current) clearInterval(genTimerRef.current);
+      if (commitTimerRef.current) clearInterval(commitTimerRef.current);
+      setTimingPhase('idle');
       console.error('Error fetching data:', error);
       setMessage('Error fetching message.');
       setShowArrow(false);
     }
-  }, []);
+    setLoading(false);
+    setProgress(0);
+  }, [dataCount]);
 
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (message) {
       setDisplayedText('');
       let index = 0;
@@ -161,11 +216,55 @@ function HomePage() {
     }
   }, [message]);
 
+  // Cleanup timers on unmount
+  React.useEffect(() => {
+    return () => {
+      if (genTimerRef.current) clearInterval(genTimerRef.current);
+      if (commitTimerRef.current) clearInterval(commitTimerRef.current);
+    };
+  }, []);
+
   return (
     <div className="App">
       <header className="App-header">
         <h1>My e-commerce Page</h1>
-        <button onClick={handleClick}>generate data</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'center', marginBottom: '1rem' }}>
+          <label htmlFor="data-count" style={{ fontWeight: 500 }}>Rows to generate:</label>
+          <input
+            id="data-count"
+            type="number"
+            min={1}
+            max={999999}
+            value={dataCount}
+            onChange={e => setDataCount(Math.max(1, Math.min(999999, Number(e.target.value))))}
+            style={{ width: '250px', padding: '0.3rem', borderRadius: '6px', border: '1px solid #ccc', textAlign: 'center', color: 'black' }}
+          />
+          <button onClick={handleClick} disabled={loading}>
+            {loading ? 'Generating...' : 'generate data'}
+          </button>
+        </div>
+        {loading && (
+          <div style={{ width: '100%', maxWidth: 600, margin: '0 auto 1rem auto', padding: '0 1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, background: '#eee', borderRadius: 8, height: 18, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.round((progress / dataCount) * 100)}%`, background: '#7c3aed', height: '100%', transition: 'width 0.2s', borderRadius: 8 }} />
+              </div>
+              <span style={{ minWidth: 80, fontWeight: 500, color: '#fff', fontSize: 14 }}>{progress} / {dataCount}</span>
+            </div>
+          </div>
+        )}
+        {!loading && finalGenTime !== null && finalCommitTime !== null && (
+          <div style={{ width: '100%', maxWidth: 600, margin: '0 auto 1rem auto', padding: '0 1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center' }}>
+              <span style={{ minWidth: 120, fontWeight: 500, color: '#fff', fontSize: 14 }}>
+                Gen: {finalGenTime.toFixed(2)}s
+              </span>
+              <span style={{ minWidth: 120, fontWeight: 500, color: '#fff', fontSize: 14 }}>
+                Commit: {finalCommitTime.toFixed(2)}s
+              </span>
+            </div>
+          </div>
+        )}
         {displayedText && <p className="typewriter-text">{displayedText}</p>}
         {showArrow && (
           <div className="arrow-container" onClick={() => navigate('/user-table')}>
@@ -275,70 +374,72 @@ function DataTablePage() {
   return (
     <div className="App app-with-left-menu">
       <header className="App-header">
-        <h1>Data Table</h1>
-
         {/* Left fixed menu (contains Back to Home and Table List) */}
         <LeftMenu showTable={showTable} setShowTable={setShowTable} />
 
-
-        <div className="table-container">
-          {/* All Table Buttons - Center */}
-          {!showTable && (
-            <div className="center-button-container">
-              {tables.map((table) => (
-                <button 
-                  key={table.name}
-                  className="table-button"
-                  onClick={() => handleTableSelect(table.name)}
-                >
-                  {table.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Data Table - Hidden by default */}
-          {showTable && (
-            loading ? (
-              <p>Loading...</p>
-            ) : tableData.length > 0 ? (
-              <table className={`${activeTable}-table`}>
-                <thead>
-                  <tr>
-                    {visibleColumns.map((column, idx) => (
-                      <th key={idx}>{column}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableData.map((data, index) => (
-                    <tr key={index}>
-                      {visibleFields.map((field, idx) => (
-                        <td key={idx}>{data[field]}</td>
+        {/* Only render table-container and h1 when table is shown */}
+        {showTable ? (
+          <>
+            <h1>Data Table</h1>
+            <div className="table-container">
+              {/* Data Table - Hidden by default */}
+              {loading ? (
+                <p>Loading...</p>
+              ) : tableData.length > 0 ? (
+                <table className={`${activeTable}-table`}>
+                  <thead>
+                    <tr>
+                      {visibleColumns.map((column, idx) => (
+                        <th key={idx}>{column}</th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <p>No {activeTable} data found.</p>
-            )
-          )}
-        </div>
+                  </thead>
+                  <tbody>
+                    {tableData.map((data, index) => (
+                      <tr key={index}>
+                        {visibleFields.map((field, idx) => (
+                          <td key={idx}>{data[field]}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p>No {activeTable} data found.</p>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="center-button-container">
+            {tables.map((table) => (
+              <button 
+                key={table.name}
+                className="table-button"
+                onClick={() => handleTableSelect(table.name)}
+              >
+                {table.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Blinking down arrow below the table-container */}
-        <div className="blinking-arrow-below">
-          <button
-            className="blinking-arrow"
-            onClick={handleArrowClick}
-            aria-label="Scroll to next section"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', outline: 'none' }}
-          >
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-        </div>
+        {/* Blinking down arrow below the table-container, only when table is shown and not clipped by overflow */}
+        {showTable && (
+          <div className="blinking-arrow-below">
+            <button
+              className="blinking-arrow"
+              onClick={handleArrowClick}
+              aria-label="Scroll to next section"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', outline: 'none' }}
+            >
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Blinking down arrow removed from outside table, now only shown with table */}
 
         {/* Empty page below table-container */}
         <div ref={emptyPageRef} className="empty-page" style={{ minHeight: '800px' }}></div>

@@ -87,12 +87,14 @@ class DataGenerator:
         }
         return categories_data
 
+
     # Generate Subcategories Table Data
     def generate_subcategories_data(self, category):
         create_time = datetime.now()
         delete_time = fake.date_time_between(start_date=create_time, end_date='now')
         subcategory_id = f"subcategory_id-{uuid.uuid4()}"
-        subcategory_name = fake.unique.word().capitalize() + " Subcategory"
+        # Use non-unique word for subcategory name to avoid unique pool exhaustion
+        subcategory_name = fake.word().capitalize() + " Subcategory"
         description = fake.text(max_nb_chars=50)
         subcategories_data = {
             "id": subcategory_id,
@@ -104,12 +106,14 @@ class DataGenerator:
         }
         return subcategories_data
 
+
     # Generate Products Table Data
     def generate_products_data(self, subcategory):
         create_time = datetime.now()
         delete_time = fake.date_time_between(start_date=create_time, end_date='now')
         product_id = f"product_id-{uuid.uuid4()}"
-        product_name = fake.unique.catch_phrase()
+        # Use non-unique catch_phrase for product name
+        product_name = fake.catch_phrase()
         product_description = fake.paragraph()
         products_data = {
             "id": product_id,
@@ -121,11 +125,13 @@ class DataGenerator:
         }
         return products_data
 
+
     # Generate product_sku Table Data
     def generate_sku_data(self, category, subcategory, product):
         create_time = datetime.now()
         delete_time = fake.date_time_between(start_date=create_time, end_date='now')
-        sku_number = fake.unique.random_number(digits=5, fix_len=True)
+        # Use non-unique random_number for sku_number
+        sku_number = fake.random_number(digits=5, fix_len=True)
         sku_id = f"{category['id'][-3:]}-{subcategory['id'][-3:]}-{product['id'][-3:]}-{sku_number}"
         price = round(random.uniform(5.0, 500.0), 2)
         stock = random.randint(0, 9999999)
