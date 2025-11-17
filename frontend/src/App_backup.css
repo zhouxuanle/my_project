@@ -74,7 +74,7 @@
   }
 
   .data-table-base td {
-    @apply p-dynamic border-b border-white/10 text-dynamic-sm truncate whitespace-nowrap max-w-[80px] break-words;
+    @apply p-dynamic border-b border-white/10 text-dynamic-sm truncate whitespace-nowrap max-w-[80px];
   }
   
 
@@ -131,19 +131,16 @@
 }
 
 /* Big circular primary action (Table List) */
-.menu-circle,
-.menu-small {
-  @apply flex items-center justify-center transition-transform duration-200;
-}
-
 .menu-circle {
   @apply bg-gradient-to-b from-purple-500 to-purple-700 text-white rounded-full
-         w-16 h-16 shadow-lg shadow-purple-400/30 hover:scale-105;
+         w-16 h-16 flex items-center justify-center shadow-lg shadow-purple-400/30
+         transition-transform duration-200 hover:scale-105;
 }
 
 .menu-small {
-  @apply bg-white/10 text-white rounded-full w-12 h-12 border border-white/10 shadow-sm
-         hover:scale-105 hover:bg-white/20 hover:shadow-md;
+  @apply bg-white/10 text-white rounded-full w-12 h-12 flex items-center justify-center
+         border border-white/10 shadow-sm transition-transform transition-colors duration-200
+         transform-gpu hover:scale-105 hover:bg-white/20 hover:shadow-md;
 
   /* Accessible focus state for keyboard users */
   &:focus-visible {
@@ -184,7 +181,12 @@
 }
 .input-label { font-weight: 500; }
 .input-style {
-  @apply w-64 p-1 rounded-md border border-gray-300 text-center text-black;
+  width: 250px;
+  padding: 0.3rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  text-align: center;
+  color: black;
 }
 .gen-commit-time {
   width: 100%;
@@ -193,10 +195,16 @@
   padding: 0 1rem;
 }
 .gen-commit-time-row {
-  @apply flex items-center gap-3 justify-center;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
 }
 .gen-commit-time-text {
-  @apply min-w-[120px] font-medium text-white text-sm;
+  min-width: 120px;
+  font-weight: 500;
+  color: #fff;
+  font-size: 14px;
 }
 .arrow-button-style {
   background: none;

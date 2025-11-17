@@ -2,12 +2,11 @@ from flask import Flask, jsonify, request
 import time
 from flask_cors import CORS
 import pymysql
-from pymysql import cursors
-from pymysql.connections import Connection
 from dbutils.pooled_db import PooledDB
 from generate_event_tracking_data import DataGenerator
 import os
 from dotenv import load_dotenv
+import logging
 load_dotenv()
 
 # 阿里云 RDS 连接配置
@@ -39,22 +38,51 @@ gd = DataGenerator()
 
 
 app = Flask(__name__)
-CORS(app) # Enable CORS for frontend communication
+CORS(app)  # Enable CORS for frontend communication
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 @app.route('/write_to_db', methods=['POST'])
 def write_to_db():
     connection = None
     try:
-        # Use connection pool for better performance
         connection = pool.connection()
-        # Get dataCount from request JSON, default to 1
         data = request.get_json(silent=True) or {}
         data_count = int(data.get('dataCount', 1))
         messages = []
         user_ids = []
-        gen_start = time.time()
         with connection.cursor() as cursor:
+            sql_total_time = 0
+            python_total_time = 0
+            # Prepare lists for each table
+            users = []
+            addresses = []
+            categories = []
+            subcategories = []
+            products = []
+            products_skus = []
+            payments = []
+            orders = []
+            wishlists = []
+            order_items = []
+            carts = []
+
+            def append_data(user, address, category, subcategory, product, products_sku, payment, order, wishlist, order_item, cart):
+                users.append((user['id'], user['username'], user['real_name'], user['phone_number'], user['sex'], user['job'], user['company'], user['email'], user['password'], user['birth_of_date'], user['age'], user['create_time'], user['delete_time']))
+                addresses.append((address['id'], address['user_id'], address['title'], address['address_line'], address['country'], address['city'], address['postal_code'], address['create_time'], address['delete_time']))
+                categories.append((category['id'], category['name'], category['description'], category['create_time'], category['delete_time']))
+                subcategories.append((subcategory['id'], subcategory['parent_id'], subcategory['name'], subcategory['description'], subcategory['create_time'], subcategory['delete_time']))
+                products.append((product['id'], product['name'], product['description'], product['category_id'], product['create_time'], product['delete_time']))
+                products_skus.append((products_sku['id'], products_sku['product_id'], products_sku['price'], products_sku['quantity'], products_sku['create_time'], products_sku['delete_time']))
+                payments.append((payment['id'], payment['amount'], payment['provider'], payment['status'], payment['create_time'], payment['updated_at']))
+                orders.append((order['id'], order['user_id'], order['payment_id'], order['create_time'], order['updated_at']))
+                wishlists.append((wishlist['id'], wishlist['user_id'], wishlist['products_sku_id'], wishlist['create_time'], wishlist['delete_time']))
+                order_items.append((order_item['id'], order_item['order_id'], order_item['products_sku_id'], order_item['quantity'], order_item['create_time'], order_item['updated_at']))
+                carts.append((cart['id'], cart['order_id'], cart['products_sku_id'], cart['quantity'], cart['create_time'], cart['updated_at']))
+
             for _ in range(data_count):
+                py_start = time.perf_counter()
                 user = gd.generate_user_data()
                 address = gd.generate_fake_address(user)
                 category = gd.generate_categories_data()
@@ -66,52 +94,43 @@ def write_to_db():
                 order = gd.generate_order_details_data(user,payment)
                 order_item = gd.generate_order_item_data(products_sku,order)
                 cart = gd.generate_cart_data(products_sku,order)
+                py_end = time.perf_counter()
 
-                queries = [
-                    ("INSERT INTO users (id, user_name, real_name, phone_number, sex, job, company, email, password, birth_of_date, age, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                     (user['id'], user['username'], user['real_name'], user['phone_number'], user['sex'], user['job'], user['company'], user['email'], user['password'], user['birth_of_date'], user['age'], user['create_time'], user['delete_time'])),
-                    ("INSERT INTO addresses (id, user_id, title, address_line, country, city, postal_code, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                     (address['id'], address['user_id'], address['title'], address['address_line'], address['country'], address['city'], address['postal_code'], address['create_time'], address['delete_time'])),
-                    ("INSERT INTO categories (id, name, description, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s)",
-                     (category['id'], category['name'], category['description'], category['create_time'], category['delete_time'])),
-                    ("INSERT INTO sub_categories (id, parent_id, name, description, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s, %s)",
-                     (subcategory['id'], subcategory['parent_id'], subcategory['name'], subcategory['description'], subcategory['create_time'], subcategory['delete_time'])),
-                    ("INSERT INTO products (id, name, description, category_id, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s, %s)",
-                     (product['id'], product['name'], product['description'], product['category_id'], product['create_time'], product['delete_time'])),
-                    ("INSERT INTO products_skus (id, product_id, price, stock, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s, %s)",
-                     (products_sku['id'], products_sku['product_id'], products_sku['price'], products_sku['quantity'], products_sku['create_time'], products_sku['delete_time'])),
-                    ("INSERT INTO payment_details (id, amount, provider, status, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)",
-                     (payment['id'], payment['amount'], payment['provider'], payment['status'], payment['create_time'], payment['updated_at'])),
-                    ("INSERT INTO order_details (id, user_id, payment_id, created_at, updated_at) VALUES (%s, %s, %s, %s, %s)",
-                     (order['id'], order['user_id'], order['payment_id'], order['create_time'], order['updated_at'])),
-                    ("INSERT INTO wishlist (id, user_id, products_sku_id, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s)",
-                     (wishlist['id'], wishlist['user_id'], wishlist['products_sku_id'], wishlist['create_time'], wishlist['delete_time'])),
-                    ("INSERT INTO order_item (id, order_id, products_sku_id, quantity, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)",
-                     (order_item['id'], order_item['order_id'], order_item['products_sku_id'], order_item['quantity'], order_item['create_time'], order_item['updated_at'])),
-                    ("INSERT INTO cart (id, order_id, products_sku_id, quantity, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)",
-                     (cart['id'], cart['order_id'], cart['products_sku_id'], cart['quantity'], cart['create_time'], cart['updated_at']))
-                ]
-                for query, qdata in queries:
-                    cursor.execute(query, qdata)
+                append_data(user, address, category, subcategory, product, products_sku, payment, order, wishlist, order_item, cart)
                 messages.append(f"your user name is : {user['username']}")
                 user_ids.append(user['id'])
-            gen_end = time.time()
-            commit_start = gen_end
+                python_total_time += (py_end - py_start)
+
+            import time as _time
+            sql_start = _time.perf_counter()
+            cursor.executemany("INSERT INTO users (id, user_name, real_name, phone_number, sex, job, company, email, password, birth_of_date, age, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", users)
+            cursor.executemany("INSERT INTO addresses (id, user_id, title, address_line, country, city, postal_code, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", addresses)
+            cursor.executemany("INSERT INTO categories (id, name, description, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s)", categories)
+            cursor.executemany("INSERT INTO sub_categories (id, parent_id, name, description, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s, %s)", subcategories)
+            cursor.executemany("INSERT INTO products (id, name, description, category_id, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s, %s)", products)
+            cursor.executemany("INSERT INTO products_skus (id, product_id, price, stock, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s, %s)", products_skus)
+            cursor.executemany("INSERT INTO payment_details (id, amount, provider, status, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)", payments)
+            cursor.executemany("INSERT INTO order_details (id, user_id, payment_id, created_at, updated_at) VALUES (%s, %s, %s, %s, %s)", orders)
+            cursor.executemany("INSERT INTO wishlist (id, user_id, products_sku_id, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s)", wishlists)
+            cursor.executemany("INSERT INTO order_item (id, order_id, products_sku_id, quantity, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)", order_items)
+            cursor.executemany("INSERT INTO cart (id, order_id, products_sku_id, quantity, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)", carts)
             connection.commit()
-            commit_end = time.time()
+            sql_end = _time.perf_counter()
+            sql_total_time = sql_end - sql_start
+            logging.info(f'sql time {sql_total_time:.4f}s, python time: {python_total_time:.4f}s')
+
         return jsonify({
             'success': True,
             'message': messages[-1] if messages else '',
             'user_id': user_ids[-1] if user_ids else None,
             'all_messages': messages,
             'all_user_ids': user_ids,
-            'generation_time': gen_end - gen_start,
-            'commit_time': commit_end - commit_start
+            'generation_time': python_total_time,
+            'commit_time': sql_total_time
         })
 
     except Exception as e:
-        print("数据库操作失败:", str(e))
-        # 如果发生错误，回滚事务
+        logging.error(f"数据库操作失败: {str(e)}")
         if connection:
             connection.rollback()
         return jsonify({
