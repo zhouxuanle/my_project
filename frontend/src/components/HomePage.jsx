@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useTypewriterEffect } from '../hooks';
 import { API_ENDPOINTS, DATA_COUNT_LIMITS } from '../constants';
 import { validateDataCount } from '../utils';
+import Button from './ui/Button';
+import InputGroup from './ui/InputGroup';
+import Panel from './ui/Panel';
+import PageTitle from './ui/PageTitle';
 
 function HomePage() {
   const [message, setMessage] = useState('');
@@ -31,8 +35,8 @@ function HomePage() {
       });
       const data = await response.json();
       setMessage(data.message);
-      if (typeof data.generation_time === 'number') setGenTime(data.generation_time);
-      if (typeof data.commit_time === 'number') setCommitTime(data.commit_time);
+      setGenTime(data.generation_time);
+      setCommitTime(data.commit_time);
       if (data.success === true) {
         setShowArrow(true);
       }
@@ -47,22 +51,22 @@ function HomePage() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>My e-commerce Page</h1>
-        <div className="input-row">
-          <label htmlFor="data-count" className="input-label">Rows to generate:</label>
-          <input
+        <PageTitle>My e-commerce Page</PageTitle>
+        
+        <Panel>
+          <InputGroup
+            label="Rows to generate:"
             id="data-count"
             type="number"
             min={DATA_COUNT_LIMITS.MIN}
             max={DATA_COUNT_LIMITS.MAX}
             value={dataCount}
             onChange={e => setDataCount(validateDataCount(e.target.value))}
-            className="input-style"
           />
-          <button onClick={handleClick} disabled={loading}>
-            {loading ? 'Generating...' : 'generate data'}
-          </button>
-        </div>
+          <Button onClick={handleClick} disabled={loading} variant="action">
+            {loading ? 'Generating...' : 'Generate Data'}
+          </Button>
+        </Panel>
         {/* Show gen/commit time below input after generation completes */}
         {!loading && genTime !== null && commitTime !== null && (
           <div className="gen-commit-time">
@@ -72,11 +76,11 @@ function HomePage() {
             </div>
           </div>
         )}
-        {displayedText && <p className="typewriter-text">{displayedText}</p>}
+        {!loading && displayedText && <p className="typewriter-text">{displayedText}</p>}
         {showArrow && (
-          <div className="arrow-container" onClick={() => navigate('/user-table')}>
+          <Button variant="primary" className="w-fit mx-auto" onClick={() => navigate('/user-table')}>
             <span>View Data Table →</span>
-          </div>
+          </Button>
         )}
       </header>
     </div>

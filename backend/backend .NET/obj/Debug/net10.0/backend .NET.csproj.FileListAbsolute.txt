@@ -1,0 +1,18 @@
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\backend .NET.csproj.AssemblyReference.cache
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\backend .NET.GeneratedMSBuildEditorConfig.editorconfig
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\backend .NET.AssemblyInfoInputs.cache
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\backend .NET.AssemblyInfo.cs
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\backend .NET.csproj.CoreCompileInputs.cache
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\backend .NET.sourcelink.json
+D:\shanlee\学习\my_project\backend\backend .NET\bin\Debug\net10.0\backend .NET.exe
+D:\shanlee\学习\my_project\backend\backend .NET\bin\Debug\net10.0\backend .NET.deps.json
+D:\shanlee\学习\my_project\backend\backend .NET\bin\Debug\net10.0\backend .NET.runtimeconfig.json
+D:\shanlee\学习\my_project\backend\backend .NET\bin\Debug\net10.0\backend .NET.dll
+D:\shanlee\学习\my_project\backend\backend .NET\bin\Debug\net10.0\backend .NET.pdb
+D:\shanlee\学习\my_project\backend\backend .NET\bin\Debug\net10.0\Bogus.dll
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\backend .E3EFF8A7.Up2Date
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\backend .NET.dll
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\refint\backend .NET.dll
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\backend .NET.pdb
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\backend .NET.genruntimeconfig.cache
+D:\shanlee\学习\my_project\backend\backend .NET\obj\Debug\net10.0\ref\backend .NET.dll

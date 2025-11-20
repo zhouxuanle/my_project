@@ -2,12 +2,18 @@ from flask import Flask, jsonify, request
 import time
 from flask_cors import CORS
 import pymysql
+import socks
+import socket
 from dbutils.pooled_db import PooledDB
 from generate_event_tracking_data import DataGenerator
 import os
 from dotenv import load_dotenv
 import logging
 load_dotenv()
+
+# 设置 socks5 代理
+socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 7890)  # Clash 的本地代理端口
+socket.socket = socks.socksocket
 
 # 阿里云 RDS 连接配置
 config = {

@@ -5,6 +5,8 @@ import { getMaxColumns, getVisibleColumnsAndFields } from '../utils';
 import { TABLE_CONFIGS } from '../config/tableConfigs';
 import { ArrowDownIcon } from '../icons';
 import LeftMenu from './LeftMenu';
+import Button from './ui/Button';
+import { TableContainer, Table, Thead, Th, Tbody, Tr, Td } from './ui/Table';
 
 function DataTablePage() {
   const [loading, setLoading] = useState(true);
@@ -59,13 +61,10 @@ function DataTablePage() {
   }, [activeTable, fetchTableData]);
 
   // Memoize tables array from config
-  const tables = useMemo(() =>
-    Object.entries(TABLE_CONFIGS).map(([name, config]) => ({
-      name,
-      label: config.label
-    })),
-    []
-  );
+  const tables = Object.keys(TABLE_CONFIGS).map(key => ({
+    name: key,
+    label: TABLE_CONFIGS[key].label
+  }));
 
   // Ref for the empty page
   const emptyPageRef = useRef(null);
@@ -78,53 +77,49 @@ function DataTablePage() {
   }, []);
 
   return (
-    <div className="App app-with-left-menu">
+    <div className={`App ${showTable ? 'app-with-left-menu' : ''}`}>
+      {showTable && <LeftMenu showTable={showTable} setShowTable={setShowTable} />}
+      
       <header className="App-header">
-        {/* Left fixed menu (contains Back to Home and Table List) */}
-        <LeftMenu showTable={showTable} setShowTable={setShowTable} />
-
-        {/* Only render table-container and h1 when table is shown */}
+        <h1 className="page-title">Data Tables</h1>
+        
         {showTable ? (
           <>
-            <h1>Data Table</h1>
-            <div className="table-container">
-              {/* Data Table - Hidden by default */}
-              {loading ? (
-                <p>Loading...</p>
-              ) : tableData.length > 0 ? (
-                <table className={`${activeTable}-table`}>
-                  <thead>
-                    <tr>
-                      {visibleColumns.map((column, idx) => (
-                        <th key={idx}>{column}</th>
+            <TableContainer>
+              {tableData.length > 0 ? (
+                <Table>
+                  <Thead>
+                    <Tr>
+                      {visibleColumns.map((col, index) => (
+                        <Th key={index}>{col}</Th>
                       ))}
-                    </tr>
-                  </thead>
-                  <tbody>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
                     {tableData.map((data, index) => (
-                      <tr key={data.id || index}>
+                      <Tr key={data.id || index}>
                         {visibleFields.map((field, idx) => (
-                          <td key={idx}>{data[field]}</td>
+                          <Td key={idx}>{data[field]}</Td>
                         ))}
-                      </tr>
+                      </Tr>
                     ))}
-                  </tbody>
-                </table>
+                  </Tbody>
+                </Table>
               ) : (
                 <p>No {activeTable} data found.</p>
               )}
-            </div>
+            </TableContainer>
           </>
         ) : (
           <div className="center-button-container">
             {tables.map((table) => (
-              <button 
+              <Button 
                 key={table.name}
-                className="table-button"
+                variant="table"
                 onClick={() => handleTableSelect(table.name)}
               >
                 {table.label}
-              </button>
+              </Button>
             ))}
           </div>
         )}

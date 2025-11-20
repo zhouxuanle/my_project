@@ -10,7 +10,8 @@ export function useTypewriterEffect(text, speed = 50) {
       let index = 0;
       const timer = setInterval(() => {
         if (index < text.length) {
-          setDisplayedText(prev => prev + text[index]);
+          let letter_message = text[index];
+          setDisplayedText(prev => prev + letter_message);
           index++;
         } else {
           clearInterval(timer);

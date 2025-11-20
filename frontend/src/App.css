@@ -1,16 +1,44 @@
-.blinking-arrow {
-  animation: blink-arrow 1.2s infinite;
-}
-
-@keyframes blink-arrow {
-  0%, 100% { opacity: 1; transform: translateY(0); }
-  50% { opacity: 0.4; transform: translateY(10px); }
-}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* =========================================
+   Global & Animations
+   ========================================= */
+@keyframes blink-arrow {
+  0%, 100% { opacity: 1; transform: translateY(0); }
+  50% { opacity: 0.4; transform: translateY(10px); }
+}
+
+@keyframes blink {
+  0%, 50% { border-color: white; }
+  51%, 100% { border-color: transparent; }
+}
+
+.blinking-arrow {
+  animation: blink-arrow 1.2s infinite;
+}
+
+/* Remove arrows for number input fields */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 @layer components {
+  /* =========================================
+     Layout & App Container
+     ========================================= */
   .App {
     @apply text-center;
   }
@@ -20,30 +48,60 @@
     font-size: calc(10px + 2vmin);
   }
 
+  /* Shift header content to avoid overlap with fixed menu */
+  .app-with-left-menu .App-header {
+    @apply pl-20 md:pl-28;
+  }
+
+  /* =========================================
+     Left Menu (Layout Only)
+     ========================================= */
+  .left-menu {
+    @apply fixed left-4 top-1/4 z-40 flex flex-col items-center gap-3;
+  }
+  
+  .menu-label {
+    @apply text-xs text-white/80 mt-1 select-none;
+  }
+
+  @screen md {
+    .left-menu { @apply left-6 }
+    .menu-label { @apply text-sm }
+  }
+
+  /* =========================================
+     Home Page Specifics
+     ========================================= */
   .typewriter-text {
     @apply border-r-2 border-white;
     animation: blink 1s infinite;
   }
 
-  .app-button {
-    @apply bg-app-dark text-white border border-white/10 rounded-lg cursor-pointer 
-           transition-all duration-300 ease-in-out mt-8 mb-8 flex items-center gap-2.5 
-           px-5 py-4 hover:bg-app-hover hover:translate-x-1;
+  /* Result Section */
+  .gen-commit-time {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto 1rem auto;
+    padding: 0 1rem;
   }
 
-  .App-header > button,
-  .table-container > button,
-  .arrow-container,
-  .back-to-home-button {
-    @apply app-button w-fit mx-auto
+  .gen-commit-time-row {
+    @apply flex items-center gap-3 justify-center;
   }
 
-  .table-container {
-    @apply mx-auto p-dynamic bg-white/10 rounded-lg w-[90%];
-    overflow: hidden;
-    max-height: calc(100vh - 100px);
+  .gen-commit-time-text {
+    @apply min-w-[120px] font-medium text-white text-sm;
   }
-  /* Blinking arrow absolutely positioned at the bottom of the table-container */
+
+  /* Navigation Buttons Container */
+  .center-button-container {
+    @apply grid gap-4 justify-items-center content-center w-[80%] h-full my-8;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  /* =========================================
+     Data Table Page Specifics
+     ========================================= */
   .blinking-arrow-below {
     display: flex;
     justify-content: center;
@@ -52,157 +110,16 @@
     width: 100%;
   }
 
-  .center-button-container {
-  @apply grid gap-4 justify-items-center content-center w-[80%] h-full my-8;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  /* =========================================
+     Utilities
+     ========================================= */
+  .arrow-button-style {
+    background: none;
+    border: none;
+    cursor: pointer;
+    outline: none;
   }
 
-  .table-button {
-    /* Use a consistent height and full width so all buttons match size */
-    @apply app-button w-full h-16 text-base font-semibold 
-      hover:scale-110 hover:shadow-lg hover:shadow-black/30
-      flex justify-center items-center m-0;
-  }
-
-  /* Base table styles for all data tables */
-  .data-table-base {
-    @apply w-full border-collapse my-dynamic bg-white/5 rounded-lg;
-  }
-
-  .data-table-base thead {
-    @apply bg-white/10;
-  }
-
-  .data-table-base td {
-    @apply p-dynamic border-b border-white/10 text-dynamic-sm truncate whitespace-nowrap max-w-[80px] break-words;
-  }
-  
-
-  .data-table-base td {
-    @apply p-dynamic border-b border-white/10 break-words text-dynamic-sm;
-  }
-
-  .data-table-base tbody tr {
-    @apply transition-colors duration-200 hover:bg-white/[0.08];
-  }
-
-  .data-table-base tbody tr:last-child td {
-    @apply border-b-0;
-  }
-
-  /* Apply base styles to all table types */
-  .user-table,
-  .address-table,
-  .category-table,
-  .subcategory-table,
-  .product-table,
-  .products_sku-table,
-  .wishlist-table,
-  .payment-table,
-  .order-table,
-  .order_item-table,
-  .cart-table {
-    @apply data-table-base;
-  }
-
-  /* Responsive styles */
-  @screen sm {
-    .data-table-base th {
-      @apply p-3 text-xs;
-    }
-    .data-table-base td {
-      @apply p-2 text-[9px];
-    }
-  }
-
-  @screen md {
-    .data-table-base th {
-      @apply p-4 text-sm;
-    }
-    .data-table-base td {
-      @apply p-3 text-xs;
-    }
-  }
+  .svg-block { display: block; }
+  .empty-page-style { min-height: 800px; }
 }
-
-/* Left fixed vertical menu styles */
-.left-menu {
-  @apply fixed left-4 top-1/4 z-40 flex flex-col items-center gap-3;
-}
-
-/* Big circular primary action (Table List) */
-.menu-circle,
-.menu-small {
-  @apply flex items-center justify-center transition-transform duration-200;
-}
-
-.menu-circle {
-  @apply bg-gradient-to-b from-purple-500 to-purple-700 text-white rounded-full
-         w-16 h-16 shadow-lg shadow-purple-400/30 hover:scale-105;
-}
-
-.menu-small {
-  @apply bg-white/10 text-white rounded-full w-12 h-12 border border-white/10 shadow-sm
-         hover:scale-105 hover:bg-white/20 hover:shadow-md;
-
-  /* Accessible focus state for keyboard users */
-  &:focus-visible {
-    @apply outline-none ring-2 ring-purple-400/60;
-  }
-}
-
-.menu-icon { @apply block }
-
-.menu-label {
-  @apply text-xs text-white/80 mt-1 select-none;
-}
-
-/* Shift header content to avoid overlap with fixed menu */
-.app-with-left-menu .App-header {
-  @apply pl-20 md:pl-28;
-}
-
-@screen md {
-  .left-menu { @apply left-6 }
-  .menu-circle { @apply w-20 h-20 }
-  .menu-small { @apply w-14 h-14 }
-  .menu-label { @apply text-sm }
-}
-
-@keyframes blink {
-  0%, 50% { border-color: white; }
-  51%, 100% { border-color: transparent; }
-}
-
-/* Small helper classes moved from inline styles in App.jsx */
-.input-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  justify-content: center;
-  margin-bottom: 1rem;
-}
-.input-label { font-weight: 500; }
-.input-style {
-  @apply w-64 p-1 rounded-md border border-gray-300 text-center text-black;
-}
-.gen-commit-time {
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto 1rem auto;
-  padding: 0 1rem;
-}
-.gen-commit-time-row {
-  @apply flex items-center gap-3 justify-center;
-}
-.gen-commit-time-text {
-  @apply min-w-[120px] font-medium text-white text-sm;
-}
-.arrow-button-style {
-  background: none;
-  border: none;
-  cursor: pointer;
-  outline: none;
-}
-.svg-block { display: block; }
-.empty-page-style { min-height: 800px; }

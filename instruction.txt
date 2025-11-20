@@ -1,8 +1,0 @@
-Backend:
-Install Flask and Flask-CORS: pip install Flask Flask-CORS
-Save the Python code as app.py and run it: python app.py
-Frontend:
-Create a new React app: npx create-react-app frontend 
-Navigate into the frontend directory: cd frontend
-Replace src/App.js with the provided React code.
-Start the React development server: npm start
