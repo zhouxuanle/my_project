@@ -69,16 +69,14 @@ function HomePage() {
         </Panel>
         {/* Show gen/commit time below input after generation completes */}
         {!loading && genTime !== null && commitTime !== null && (
-          <div className="gen-commit-time">
             <div className="gen-commit-time-row">
               <span className="gen-commit-time-text">Gen: {genTime.toFixed(2)}s</span>
               <span className="gen-commit-time-text">Commit: {commitTime.toFixed(2)}s</span>
             </div>
-          </div>
         )}
         {!loading && displayedText && <p className="typewriter-text">{displayedText}</p>}
         {showArrow && (
-          <Button variant="primary" className="w-fit mx-auto" onClick={() => navigate('/user-table')}>
+          <Button variant="primary" onClick={() => navigate('/user-table')}>
             <span>View Data Table →</span>
           </Button>
         )}

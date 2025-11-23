@@ -73,24 +73,17 @@ input:focus {
      Home Page Specifics
      ========================================= */
   .typewriter-text {
-    @apply border-r-2 border-white;
+    @apply border-r-2 border-white mb-4;
     animation: blink 1s infinite;
   }
 
   /* Result Section */
-  .gen-commit-time {
-    width: 100%;
-    max-width: 600px;
-    margin: 0 auto 1rem auto;
-    padding: 0 1rem;
-  }
-
   .gen-commit-time-row {
-    @apply flex items-center gap-3 justify-center;
+    @apply flex gap-3 mb-4;
   }
 
   .gen-commit-time-text {
-    @apply min-w-[120px] font-medium text-white text-sm;
+    @apply min-w-[120px] font-medium text-sm;
   }
 
   /* Navigation Buttons Container */
