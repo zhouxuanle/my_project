@@ -9,6 +9,9 @@ from generate_event_tracking_data import DataGenerator
 import os
 from dotenv import load_dotenv
 import logging
+import uuid
+from azure.storage.queue import QueueClient
+import json
 load_dotenv()
 
 # 设置 socks5 代理
@@ -199,6 +202,26 @@ def get_table_data(table_name):
     finally:
         if connection:
             connection.close()
+
+@app.route('/generate_raw', methods=['POST'])
+def generate_job():
+    data = request.get_json()
+    count = data.get('dataCount', 1)
+    job_id = str(uuid.uuid4())
+
+    # Enqueue job to Azure Queue
+    connection_string = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
+    queue_name = 'data-generation-queue'
+    queue_client = QueueClient.from_connection_string(connection_string, queue_name)
+    print('queue client created---------------------')
+    message = {'jobId': job_id, 'count': count}
+    queue_client.send_message(json.dumps(message))
+    print('message has sent---------------------')
+    return jsonify({
+        'jobId': job_id,
+        'status': 'queued',
+        'count': count
+    }), 202
 
 if __name__ == '__main__':
     app.run(debug=True)

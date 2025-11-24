@@ -28,21 +28,19 @@ function HomePage() {
     setGenTime(null);
     setCommitTime(null);
     try {
-      const response = await fetch(API_ENDPOINTS.WRITE_TO_DB, {
+      const response = await fetch(API_ENDPOINTS.GENERATE_RAW, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dataCount })
       });
       const data = await response.json();
-      setMessage(data.message);
-      setGenTime(data.generation_time);
-      setCommitTime(data.commit_time);
-      if (data.success === true) {
+      setMessage(`Job submitted! Job ID: ${data.jobId}, Status: ${data.status}`);
+      if (data.jobId) {
         setShowArrow(true);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
-      setMessage('Error fetching message.');
+      console.error('Error submitting job:', error);
+      setMessage('Error submitting job.');
       setShowArrow(false);
     }
     setLoading(false);
