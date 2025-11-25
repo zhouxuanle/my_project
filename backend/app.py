@@ -11,14 +11,26 @@ from dotenv import load_dotenv
 import logging
 import uuid
 from azure.storage.queue import QueueClient
+from azure.storage.blob import BlobServiceClient
 import json
+import base64
 load_dotenv()
 
-# 设置 socks5 代理
+# Save the original socket class to bypass proxy later if needed
+original_socket = socket.socket
 socks.set_default_proxy(socks.SOCKS5, "127.0.0.1", 7890)  # Clash 的本地代理端口
 socket.socket = socks.socksocket
 
-# 阿里云 RDS 连接配置
+# Context manager to temporarily disable proxy
+class NoProxy:
+    def __enter__(self):
+        self.patched_socket = socket.socket
+        socket.socket = original_socket
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        socket.socket = self.patched_socket
+
+# azure mysql 连接配置
 config = {
     'host': os.environ['DB_HOST'],
     'port': int(os.environ['DB_PORT']),
@@ -210,18 +222,49 @@ def generate_job():
     job_id = str(uuid.uuid4())
 
     # Enqueue job to Azure Queue
-    connection_string = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
-    queue_name = 'data-generation-queue'
-    queue_client = QueueClient.from_connection_string(connection_string, queue_name)
-    print('queue client created---------------------')
-    message = {'jobId': job_id, 'count': count}
-    queue_client.send_message(json.dumps(message))
+    # Use NoProxy context to bypass SOCKS5 proxy for Azure SDK
+    with NoProxy():
+        connection_string = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
+        queue_name = 'data-generation-queue'
+        queue_client = QueueClient.from_connection_string(connection_string, queue_name)
+        print('queue client created---------------------')
+        message = {'jobId': job_id, 'count': count}
+        encoded_message = base64.b64encode(json.dumps(message).encode('utf-8')).decode('utf-8')
+        queue_client.send_message(encoded_message)
+
     print('message has sent---------------------')
     return jsonify({
         'jobId': job_id,
         'status': 'queued',
         'count': count
     }), 202
+
+@app.route('/get_raw_data/<job_id>', methods=['GET'])
+def get_raw_data(job_id):
+    try:
+        with NoProxy():
+            connection_string = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
+            blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+            container_name = 'raw-generated-data'
+            blob_name = f'{job_id}.json'
+            blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+            
+            if not blob_client.exists():
+                return jsonify({'success': False, 'message': 'Data not found or not ready yet'}), 404
+                
+            blob_data = blob_client.download_blob().readall()
+            data = json.loads(blob_data)
+            
+            return jsonify({
+                'success': True,
+                'data': data
+            })
+    except Exception as e:
+        logging.error(f"Error retrieving raw data: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error retrieving data: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

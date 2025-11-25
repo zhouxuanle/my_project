@@ -2,15 +2,18 @@ import azure.functions as func
 import logging
 import os
 import json
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from azure.storage.blob import BlobServiceClient
 from generate_event_tracking_data import DataGenerator
-from signalrcore.hub.connection_builder import HubConnectionBuilder
 
 app = func.FunctionApp()
 
 @app.queue_trigger(arg_name="azqueue", queue_name="data-generation-queue",
                    connection="AzureWebJobsStorage")
-def process_data_generation_job(azqueue: func.QueueMessage):
+@app.generic_output_binding(arg_name="signalR", type="signalR", hubName="shanleeSignalR", 
+                            connectionStringSetting="AZURE_SIGNALR_CONNECTION_STRING")
+def process_data_generation_job(azqueue: func.QueueMessage, signalR: func.Out[str]):
     logging.info('Queue trigger received message: %s', azqueue.get_body().decode('utf-8'))
     try:
         # Parse job message
@@ -48,9 +51,9 @@ def process_data_generation_job(azqueue: func.QueueMessage):
             })
 
         # Upload to Azure Blob Storage
-        blob_conn_str = os.environ.get('AZURE_STORAGE_CONNECTION_STRING') or os.environ.get('AzureWebJobsStorage')
+        blob_conn_str = os.environ.get('AzureWebJobsStorage')
         blob_service_client = BlobServiceClient.from_connection_string(blob_conn_str)
-        container_name = 'raw_generated-data'
+        container_name = 'raw-generated-data'
         blob_name = f'{job_id}.json'
         # Ensure container exists
         try:
@@ -62,24 +65,11 @@ def process_data_generation_job(azqueue: func.QueueMessage):
         logging.info(f'Data for job {job_id} uploaded to blob {blob_name} in container {container_name}')
 
         # Send job status notification via SignalR
-        signalr_conn_str = os.environ.get("AZURE_SIGNALR_CONNECTION_STRING")
-        # Parse endpoint from connection string
-        # Example connection string: Endpoint=https://<your-signalr-name>.service.signalr.net;AccessKey=...;Version=1.0;
-        endpoint = None
-        for part in signalr_conn_str.split(';'):
-            if part.startswith('Endpoint='):
-                endpoint = part.replace('Endpoint=', '').strip()
-        if endpoint:
-            hub_url = f"{endpoint}/DataGenerationHub"  # Replace 'clientHub' with your actual hub name if different
-            hub_connection = HubConnectionBuilder()\
-                .with_url(hub_url)\
-                .build()
-            hub_connection.start()
-            # Send job status update
-            hub_connection.send("JobStatusUpdate", [{"jobId": job_id, "status": "completed"}])
-            hub_connection.stop()
-            logging.info(f'SignalR notification sent for job {job_id}')
-        else:
-            logging.error('SignalR endpoint not found in connection string')
+        signalR.set(json.dumps({
+            'target': 'JobStatusUpdate',
+            'arguments': [{"jobId": job_id, "status": "completed"}]
+        }))
+        logging.info(f'SignalR notification sent for job {job_id}')
+
     except Exception as e:
         logging.error(f'Error processing job: {str(e)}')
