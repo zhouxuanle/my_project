@@ -218,9 +218,11 @@ def get_table_data(table_name):
 @app.route('/generate_raw', methods=['POST'])
 def generate_job():
     data = request.get_json()
-    count = data.get('dataCount', 1)
-    job_id = str(uuid.uuid4())
+    total_count = data.get('dataCount', 1)
+    batch_size = 1000  # You can adjust this value as needed
 
+    parent_job_id = str(uuid.uuid4())
+    job_ids = []
     # Enqueue job to Azure Queue
     # Use NoProxy context to bypass SOCKS5 proxy for Azure SDK
     with NoProxy():
@@ -228,15 +230,22 @@ def generate_job():
         queue_name = 'data-generation-queue'
         queue_client = QueueClient.from_connection_string(connection_string, queue_name)
         print('queue client created---------------------')
-        message = {'jobId': job_id, 'count': count}
-        encoded_message = base64.b64encode(json.dumps(message).encode('utf-8')).decode('utf-8')
-        queue_client.send_message(encoded_message)
+        for start in range(0, total_count, batch_size):
+            count = min(batch_size, total_count - start)
+            job_id = str(uuid.uuid4())
+            message = {'parentJobId': parent_job_id, 'jobId': job_id, 'count': count}
+            encoded_message = base64.b64encode(json.dumps(message).encode('utf-8')).decode('utf-8')
+            queue_client.send_message(encoded_message)
+            print(f'message for chunk {job_id} has sent---------------------')
+            job_ids.append(job_id)
 
-    print('message has sent---------------------')
+    print('all chunk messages have been sent---------------------')
     return jsonify({
-        'jobId': job_id,
+        'parentJobId': parent_job_id,
+        'jobIds': job_ids,
         'status': 'queued',
-        'count': count
+        'total_count': total_count,
+        'batch_size': batch_size
     }), 202
 
 @app.route('/get_raw_data/<job_id>', methods=['GET'])

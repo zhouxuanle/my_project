@@ -18,6 +18,7 @@ def process_data_generation_job(azqueue: func.QueueMessage, signalR: func.Out[st
     try:
         # Parse job message
         message = json.loads(azqueue.get_body().decode('utf-8'))
+        parent_job_id = message.get('parentJobId')
         job_id = message.get('jobId')
         count = int(message.get('count', 1))
 
@@ -54,7 +55,11 @@ def process_data_generation_job(azqueue: func.QueueMessage, signalR: func.Out[st
         blob_conn_str = os.environ.get('AzureWebJobsStorage')
         blob_service_client = BlobServiceClient.from_connection_string(blob_conn_str)
         container_name = 'raw-generated-data'
-        blob_name = f'{job_id}.json'
+        # Use parent_job_id as a virtual folder for all chunks of the same generation task
+        if parent_job_id:
+            blob_name = f'{parent_job_id}/{job_id}.json'
+        else:
+            blob_name = f'{job_id}.json'
         # Ensure container exists
         try:
             blob_service_client.create_container(container_name)
