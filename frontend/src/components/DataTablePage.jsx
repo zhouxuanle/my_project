@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useWindowWidth } from '../hooks';
 import { API_ENDPOINTS } from '../constants';
 import { getMaxColumns, getVisibleColumnsAndFields } from '../utils';
@@ -9,6 +10,8 @@ import Button from './ui/Button';
 import { TableContainer, Table, Thead, Th, Tbody, Tr, Td } from './ui/Table';
 
 function DataTablePage() {
+  const location = useLocation();
+  const parentJobId = location.state?.parentJobId;
   const [loading, setLoading] = useState(true);
   const [showTable, setShowTable] = useState(true);
   const [tableData, setTableData] = useState([]);
@@ -30,19 +33,21 @@ function DataTablePage() {
   // Fetch table data from backend
   const fetchTableData = useCallback(async (tableName) => {
     try {
-      const response = await fetch(API_ENDPOINTS.GET_TABLE(tableName));
+      const response = await fetch(API_ENDPOINTS.GET_RAW_DATA(parentJobId, tableName));
       const data = await response.json();
       if (data.success) {
         setTableData(data[tableName]);
       } else {
         console.error('Error:', data.message);
+        setTableData([]);
       }
     } catch (error) {
       console.error(`Error fetching ${tableName}:`, error);
+      setTableData([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [parentJobId]);
 
   // Fetch data when activeTable changes
   useEffect(() => {

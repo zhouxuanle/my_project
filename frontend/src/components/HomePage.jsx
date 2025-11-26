@@ -15,6 +15,7 @@ function HomePage() {
   const [loading, setLoading] = useState(false);
   const [genTime, setGenTime] = useState(null);
   const [commitTime, setCommitTime] = useState(null);
+  const [parentJobId, setParentJobId] = useState(null);
   const navigate = useNavigate();
 
   // Use custom typewriter hook
@@ -27,6 +28,7 @@ function HomePage() {
     setMessage("");
     setGenTime(null);
     setCommitTime(null);
+    setParentJobId(null);
     try {
       const response = await fetch(API_ENDPOINTS.GENERATE_RAW, {
         method: 'POST',
@@ -34,8 +36,9 @@ function HomePage() {
         body: JSON.stringify({ dataCount })
       });
       const data = await response.json();
-      setMessage(`Job submitted! Job ID: ${data.jobId}, Status: ${data.status}`);
-      if (data.jobId) {
+      setMessage(`Job submitted! ParentJob ID: ${data.parentJobId}, Status: ${data.status}`);
+      if (data.parentJobId) {
+        setParentJobId(data.parentJobId);
         setShowArrow(true);
       }
     } catch (error) {
@@ -74,7 +77,7 @@ function HomePage() {
         )}
         {!loading && displayedText && <p className="typewriter-text">{displayedText}</p>}
         {showArrow && (
-          <Button variant="primary" onClick={() => navigate('/user-table')}>
+          <Button variant="primary" onClick={() => navigate('/user-table', { state: { parentJobId: parentJobId } })}>
             <span>View Data Table →</span>
           </Button>
         )}

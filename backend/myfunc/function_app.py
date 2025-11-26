@@ -14,13 +14,13 @@ app = func.FunctionApp()
 @app.generic_output_binding(arg_name="signalR", type="signalR", hubName="shanleeSignalR", 
                             connectionStringSetting="AZURE_SIGNALR_CONNECTION_STRING")
 def process_data_generation_job(azqueue: func.QueueMessage, signalR: func.Out[str]):
-    logging.info('Queue trigger received message: %s', azqueue.get_body().decode('utf-8'))
     try:
         # Parse job message
         message = json.loads(azqueue.get_body().decode('utf-8'))
         parent_job_id = message.get('parentJobId')
         job_id = message.get('jobId')
         count = int(message.get('count', 1))
+        total_chunks = int(message.get('totalChunks', 1))  # Default to 1 if not present
 
         # Generate data
         gd = DataGenerator()
@@ -55,26 +55,25 @@ def process_data_generation_job(azqueue: func.QueueMessage, signalR: func.Out[st
         blob_conn_str = os.environ.get('AzureWebJobsStorage')
         blob_service_client = BlobServiceClient.from_connection_string(blob_conn_str)
         container_name = 'raw-generated-data'
-        # Use parent_job_id as a virtual folder for all chunks of the same generation task
-        if parent_job_id:
-            blob_name = f'{parent_job_id}/{job_id}.json'
-        else:
-            blob_name = f'{job_id}.json'
-        # Ensure container exists
+        blob_name = f'{parent_job_id}/{job_id}.json'
         try:
             blob_service_client.create_container(container_name)
         except Exception:
-            pass  # Container may already exist
+            pass  
         blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
         blob_client.upload_blob(json.dumps(generated_data, default=str), overwrite=True)
-        logging.info(f'Data for job {job_id} uploaded to blob {blob_name} in container {container_name}')
-
-        # Send job status notification via SignalR
-        signalR.set(json.dumps({
-            'target': 'JobStatusUpdate',
-            'arguments': [{"jobId": job_id, "status": "completed"}]
-        }))
-        logging.info(f'SignalR notification sent for job {job_id}')
+        # Note: This is a simple check. For high concurrency/scale, consider using Table Storage or Durable Functions.
+        blobs = list(blob_service_client.get_container_client(container_name).list_blobs(name_starts_with=f"{parent_job_id}/"))
+        completed_count = len(blobs)
+        
+        if completed_count >= total_chunks:
+            signalR.set(json.dumps({
+                'target': 'JobStatusUpdate',
+                'arguments': [{"jobId": parent_job_id, "status": "completed"}]
+            }))
+            logging.info(f'All {total_chunks} chunks completed for parent job {parent_job_id}. SignalR notification sent.')
+        else:
+            logging.info(f'Chunk {job_id} completed. Progress: {completed_count}/{total_chunks} for parent job {parent_job_id}.')
 
     except Exception as e:
         logging.error(f'Error processing job: {str(e)}')

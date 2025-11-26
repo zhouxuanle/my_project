@@ -199,7 +199,6 @@ def get_table_data(table_name):
             select_query = f"SELECT * FROM {db_table_name} ORDER BY created_at DESC LIMIT 20"
             cursor.execute(select_query)
             data = cursor.fetchall()
-            
             return jsonify({
                 'success': True,
                 table_name: data
@@ -219,10 +218,14 @@ def get_table_data(table_name):
 def generate_job():
     data = request.get_json()
     total_count = data.get('dataCount', 1)
-    batch_size = 1000  # You can adjust this value as needed
+    batch_size = 500  # You can adjust this value as needed
 
     parent_job_id = str(uuid.uuid4())
     job_ids = []
+    
+    # Calculate total chunks
+    total_chunks = (total_count + batch_size - 1) // batch_size
+
     # Enqueue job to Azure Queue
     # Use NoProxy context to bypass SOCKS5 proxy for Azure SDK
     with NoProxy():
@@ -233,7 +236,12 @@ def generate_job():
         for start in range(0, total_count, batch_size):
             count = min(batch_size, total_count - start)
             job_id = str(uuid.uuid4())
-            message = {'parentJobId': parent_job_id, 'jobId': job_id, 'count': count}
+            message = {
+                'parentJobId': parent_job_id, 
+                'jobId': job_id, 
+                'count': count,
+                'totalChunks': total_chunks
+            }
             encoded_message = base64.b64encode(json.dumps(message).encode('utf-8')).decode('utf-8')
             queue_client.send_message(encoded_message)
             print(f'message for chunk {job_id} has sent---------------------')
@@ -245,28 +253,45 @@ def generate_job():
         'jobIds': job_ids,
         'status': 'queued',
         'total_count': total_count,
-        'batch_size': batch_size
+        'batch_size': batch_size,
+        'total_chunks': total_chunks
     }), 202
 
-@app.route('/get_raw_data/<job_id>', methods=['GET'])
-def get_raw_data(job_id):
+@app.route('/get_raw_data/<parent_job_id>/<table_name>', methods=['GET'])
+def get_raw_data(parent_job_id, table_name):
     try:
         with NoProxy():
             connection_string = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
             blob_service_client = BlobServiceClient.from_connection_string(connection_string)
             container_name = 'raw-generated-data'
-            blob_name = f'{job_id}.json'
-            blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+            container_client = blob_service_client.get_container_client(container_name)
             
-            if not blob_client.exists():
+            extracted_data = []
+            # Check for chunks (virtual directory) using parent_job_id
+            blobs = list(container_client.list_blobs(name_starts_with=f"{parent_job_id}/"))
+            
+            if blobs:
+                for blob in blobs:
+                    blob_client = container_client.get_blob_client(blob.name)
+                    chunk_data = json.loads(blob_client.download_blob().readall())
+                    
+                    # Extract specific table data from this chunk
+                    chunk_extracted = [item.get(table_name) for item in chunk_data if item.get(table_name)]
+                    extracted_data.extend(chunk_extracted)
+                    
+                    # Stop if we have en
+                    # 
+                    # 
+                    # ough data
+                    if len(extracted_data) >= 100:
+                        extracted_data = extracted_data[:100]
+                        break
+            else:
                 return jsonify({'success': False, 'message': 'Data not found or not ready yet'}), 404
-                
-            blob_data = blob_client.download_blob().readall()
-            data = json.loads(blob_data)
             
             return jsonify({
                 'success': True,
-                'data': data
+                table_name: extracted_data
             })
     except Exception as e:
         logging.error(f"Error retrieving raw data: {str(e)}")
