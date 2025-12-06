@@ -218,7 +218,7 @@ def get_table_data(table_name):
 def generate_job():
     data = request.get_json()
     total_count = data.get('dataCount', 1)
-    batch_size = 500  # You can adjust this value as needed
+    batch_size = 1000  # You can adjust this value as needed
 
     parent_job_id = str(uuid.uuid4())
     job_ids = []
@@ -263,7 +263,7 @@ def get_raw_data(parent_job_id, table_name):
         with NoProxy():
             connection_string = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
             blob_service_client = BlobServiceClient.from_connection_string(connection_string)
-            container_name = 'raw-generated-data'
+            container_name = 'shanlee-raw-data'
             container_client = blob_service_client.get_container_client(container_name)
             
             extracted_data = []

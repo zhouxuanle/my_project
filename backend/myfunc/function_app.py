@@ -54,7 +54,7 @@ def process_data_generation_job(azqueue: func.QueueMessage, signalR: func.Out[st
         # Upload to Azure Blob Storage
         blob_conn_str = os.environ.get('AzureWebJobsStorage')
         blob_service_client = BlobServiceClient.from_connection_string(blob_conn_str)
-        container_name = 'raw-generated-data'
+        container_name = 'shanlee-raw-data'
         blob_name = f'{parent_job_id}/{job_id}.json'
         try:
             blob_service_client.create_container(container_name)
