@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useWindowWidth } from '../hooks';
-import { API_ENDPOINTS } from '../constants';
+import { api } from '../services/api';
 import { getMaxColumns, getVisibleColumnsAndFields } from '../utils';
 import { TABLE_CONFIGS } from '../config/tableConfigs';
 import { ArrowDownIcon } from '../icons';
@@ -36,12 +36,13 @@ function DataTablePage() {
   // Fetch table data from backend
   const fetchTableData = useCallback(async (tableName) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(API_ENDPOINTS.GET_RAW_DATA(parentJobId, tableName), {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      let response;
+      if (parentJobId) {
+        response = await api.getRawData(parentJobId, tableName);
+      } else {
+        response = await api.getTableData(tableName);
+      }
+      
       const data = await response.json();
       if (data.success) {
         setTableData(data[tableName]);

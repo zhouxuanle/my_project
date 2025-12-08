@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTypewriterEffect } from '../hooks';
-import { API_ENDPOINTS, DATA_COUNT_LIMITS } from '../constants';
+import { useTypewriterEffect, useDataFolders, useGenerateJob, useSessionStorage } from '../hooks';
+import { DATA_COUNT_LIMITS } from '../constants';
 import { validateDataCount } from '../utils';
 import Button from './ui/Button';
 import InputGroup from './ui/InputGroup';
@@ -13,15 +13,11 @@ import Signup from './Signup';
 
 function HomePage() {
   const [message, setMessage] = useState('');
-  // Controls visibility of 'View Data Table' button
-  const [showArrow, setShowArrow] = useState(() => {
-    // Show only if not first visit
-    return localStorage.getItem('hasViewedDataTable') === 'true';
-  });
+  // Controls visibility of the 'View Data Table' button
+  const [showViewTableButton, setShowViewTableButton] = useState(false);
+  // Tracks if the button has ever been shown in this session (persisted in sessionStorage)
+  const [hasViewedTable, setHasViewedTable, removeHasViewedTable] = useSessionStorage('hasViewedTable', false);
   const [dataCount, setDataCount] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [genTime, setGenTime] = useState(null);
-  const [commitTime, setCommitTime] = useState(null);
   const [parentJobId, setParentJobId] = useState(null);
   
   // Auth State
@@ -32,21 +28,53 @@ function HomePage() {
 
   const navigate = useNavigate();
 
-  // Check login status on mount
+  const { refresh: refreshFolders, hasFolder } = useDataFolders({ autoFetch: false });
+  const { generate, loading: generating } = useGenerateJob();
+
+  // Check login status on mount and fetch folders if logged in
   useEffect(() => {
     const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
-    // If coming from user-table, show the button
-    if (localStorage.getItem('hasViewedDataTable') === 'true') {
-      setShowArrow(true);
+    const loggedIn = !!token;
+    setIsLoggedIn(loggedIn);
+    if (loggedIn) refreshFolders();
+  }, [refreshFolders]);
+
+  // Keep showArrow derived from login status, whether user viewed table this session, or if folders exist
+  useEffect(() => {
+    if (isLoggedIn && (hasViewedTable || hasFolder)) {
+      setShowViewTableButton(true);
+    } else {
+      setShowViewTableButton(false);
     }
-  }, []);
+  }, [isLoggedIn, hasViewedTable, hasFolder]);
+
+  // On any refresh/hasFolder change: if there are no folders, clear the session flag
+  // so a preserved `hasViewedTable` does not incorrectly keep the button visible.
+  useEffect(() => {
+    if (!hasFolder) {
+      // Clear session flag when folders are gone so the button won't persist
+      try {
+        removeHasViewedTable();
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('Failed clearing hasViewedTable from sessionStorage', e);
+        setHasViewedTable(false);
+      }
+    }
+  }, [hasFolder, removeHasViewedTable, setHasViewedTable]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     setIsLoggedIn(false);
-    setShowArrow(false);
+    setShowViewTableButton(false);
+    setHasViewedTable(false);
+    try {
+      removeHasViewedTable();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed removing session flag on logout', e);
+    }
     setMessage('');
   };
 
@@ -60,6 +88,8 @@ function HomePage() {
     setIsLoggedIn(true);
     setShowAuthModal(false);
     setAuthMessage('');
+    // After successful login, refresh folder info
+    refreshFolders();
   };
 
   // Use custom typewriter hook
@@ -72,37 +102,24 @@ function HomePage() {
       return;
     }
 
-    setShowArrow(false);
-    setLoading(true);
+    setShowViewTableButton(false);
     setMessage("");
-    setGenTime(null);
-    setCommitTime(null);
     setParentJobId(null);
+    
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(API_ENDPOINTS.GENERATE_RAW, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ dataCount })
-      });
-      const data = await response.json();
+      const data = await generate(dataCount);
       setMessage(`Job submitted! ParentJob ID: ${data.parentJobId}, Status: ${data.status}`);
       if (data.parentJobId) {
         setParentJobId(data.parentJobId);
-        setShowArrow(true);
-        // Mark that user has viewed data table
-        localStorage.setItem('hasViewedDataTable', 'true');
+        setShowViewTableButton(true);
+        refreshFolders(); // Refresh folder list after successful generation
       }
     } catch (error) {
       console.error('Error submitting job:', error);
       setMessage('Error submitting job.');
-      setShowArrow(false);
+      setShowViewTableButton(false);
     }
-    setLoading(false);
-  }, [dataCount, isLoggedIn]);
+  }, [dataCount, isLoggedIn, generate, refreshFolders]);
 
   return (
     <div className="App relative">
@@ -132,22 +149,22 @@ function HomePage() {
             onChange={e => setDataCount(validateDataCount(e.target.value))}
           />
           <div className="flex flex-col items-center gap-2">
-            <Button onClick={handleClick} disabled={loading} variant="action">
-              {loading ? 'Generating...' : 'Generate Data'}
+            <Button onClick={handleClick} disabled={generating} variant="action">
+              {generating ? 'Generating...' : 'Generate Data'}
             </Button>
             {authMessage && <p className="text-red-400 text-sm animate-pulse">{authMessage}</p>}
           </div>
         </Panel>
-        {/* Show gen/commit time below input after generation completes */}
-        {!loading && genTime !== null && commitTime !== null && (
-            <div className="gen-commit-time-row">
-              <span className="gen-commit-time-text">Gen: {genTime.toFixed(2)}s</span>
-              <span className="gen-commit-time-text">Commit: {commitTime.toFixed(2)}s</span>
-            </div>
-        )}
-        {!loading && displayedText && <p className="typewriter-text">{displayedText}</p>}
-        {showArrow && (
-          <Button variant="primary" onClick={() => navigate('/user-table', { state: { parentJobId: parentJobId } })}>
+        {/* generation timing removed — not set anywhere (keeps UI clean) */}
+        {!generating && displayedText && <p className="typewriter-text">{displayedText}</p>}
+        {showViewTableButton && (
+          <Button
+            variant="primary"
+            onClick={() => {
+              setHasViewedTable(true);
+              navigate('/user-table', { state: { parentJobId: parentJobId } });
+            }}
+          >
             <span>View Data Table →</span>
           </Button>
         )}

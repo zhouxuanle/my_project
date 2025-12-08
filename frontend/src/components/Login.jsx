@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Button from './ui/Button';
+import { api } from '../services/api';
 
 function Login({ onSuccess, switchToSignup }) {
   const [username, setUsername] = useState('');
@@ -12,11 +13,7 @@ function Login({ onSuccess, switchToSignup }) {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('http://127.0.0.1:5000/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
+      const response = await api.login(username, password);
       
       const data = await response.json();
       

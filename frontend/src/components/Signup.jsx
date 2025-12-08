@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Button from './ui/Button';
+import { api } from '../services/api';
 
 function Signup({ onSuccess, switchToLogin }) {
   const [username, setUsername] = useState('');
@@ -12,11 +13,7 @@ function Signup({ onSuccess, switchToLogin }) {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('http://127.0.0.1:5000/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
+      const response = await api.register(username, password);
       
       const data = await response.json();
       
