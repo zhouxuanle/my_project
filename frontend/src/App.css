@@ -40,7 +40,7 @@ input:focus {
      Layout & App Container
      ========================================= */
   .App {
-    @apply text-center;
+    @apply text-center text-white;
   }
 
   .App-header {

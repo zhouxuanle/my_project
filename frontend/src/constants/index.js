@@ -5,7 +5,8 @@ export const API_ENDPOINTS = {
   WRITE_TO_DB: `${API_BASE_URL}/write_to_db`,
   GENERATE_RAW: `${API_BASE_URL}/generate_raw`,
   GET_TABLE: (tableName) => `${API_BASE_URL}/get_${tableName}`,
-  GET_RAW_DATA: (jobId, tableName) => `${API_BASE_URL}/get_raw_data/${jobId}/${tableName}`
+  GET_RAW_DATA: (jobId, tableName) => `${API_BASE_URL}/get_raw_data/${jobId}/${tableName}`,
+  LIST_PARENT_JOBS: `${API_BASE_URL}/list_parent_jobs`
 };
 
 // Input validation constants

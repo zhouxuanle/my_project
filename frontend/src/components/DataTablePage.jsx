@@ -15,7 +15,10 @@ function DataTablePage() {
   const [loading, setLoading] = useState(true);
   const [showTable, setShowTable] = useState(true);
   const [tableData, setTableData] = useState([]);
-  const [activeTable, setActiveTable] = useState('user'); // Track which table is active
+  const [activeTable, setActiveTable] = useState(() => {
+    // If navigated with a tableName in state, use it as initial active table
+    return location.state?.tableName || 'user';
+  }); // Track which table is active
 
   // Memoize table config for current active table
   const currentTableConfig = useMemo(() => TABLE_CONFIGS[activeTable], [activeTable]);
@@ -33,7 +36,12 @@ function DataTablePage() {
   // Fetch table data from backend
   const fetchTableData = useCallback(async (tableName) => {
     try {
-      const response = await fetch(API_ENDPOINTS.GET_RAW_DATA(parentJobId, tableName));
+      const token = localStorage.getItem('token');
+      const response = await fetch(API_ENDPOINTS.GET_RAW_DATA(parentJobId, tableName), {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const data = await response.json();
       if (data.success) {
         setTableData(data[tableName]);

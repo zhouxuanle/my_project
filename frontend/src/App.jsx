@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { HomePage, DataTablePage } from './components';
+import { HomePage, DataTablePage, PrivateRoute, DataFolders, DataFolderDetail } from './components';
 import './App.css';
 
 function App() {
@@ -8,7 +8,11 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/user-table" element={<DataTablePage />} />
+        <Route element={<PrivateRoute />}>
+          <Route path="/user-table" element={<DataTablePage />} />
+          <Route path="/data" element={<DataFolders />} />
+          <Route path="/data/:parentJobId" element={<DataFolderDetail />} />
+        </Route>
       </Routes>
     </Router>
   );

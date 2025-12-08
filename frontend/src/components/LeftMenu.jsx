@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TableIcon, HomeIcon } from '../icons';
+import { TableIcon, HomeIcon, DataIcon } from '../icons';
 import MenuButton from './ui/MenuButton';
 
 // Left-side menu component: fixed vertical menu with two buttons
@@ -18,6 +18,15 @@ function LeftMenu({ showTable, setShowTable }) {
         <TableIcon className="menu-icon" width={28} height={28} aria-hidden />
       </MenuButton>
       <div className="menu-label">Tables</div>
+
+      <MenuButton
+        variant="small"
+        onClick={() => navigate('/data')}
+        title="Data"
+      >
+        <DataIcon className="menu-icon" width={24} height={24} aria-hidden />
+      </MenuButton>
+      <div className="menu-label">Data</div>
 
       <MenuButton
         variant="small"

@@ -14,6 +14,8 @@ from azure.storage.queue import QueueClient
 from azure.storage.blob import BlobServiceClient
 import json
 import base64
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from werkzeug.security import generate_password_hash, check_password_hash
 load_dotenv()
 
 # Save the original socket class to bypass proxy later if needed
@@ -61,8 +63,70 @@ gd = DataGenerator()
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend communication
 
+# Configure JWT
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-key")  # Change this!
+jwt = JWTManager(app)
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+
+@app.route('/register', methods=['POST'])
+def register():
+    
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    user_id = f"{uuid.uuid4()}_{username}"
+
+    if not username or not password:
+        return jsonify({"msg": "Username and password required"}), 400
+
+    connection = None
+    try:
+        connection = pool.connection()
+        with connection.cursor() as cursor:
+            # Check if user exists
+            cursor.execute("SELECT id FROM app_users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                return jsonify({"msg": "Username already exists"}), 400
+            # Create user
+            password_hash = generate_password_hash(password)
+            cursor.execute("INSERT INTO app_users (user_id, username, password_hash) VALUES (%s, %s, %s)", (user_id, username, password_hash))
+            connection.commit()
+
+        return jsonify({"msg": "User created successfully"}), 201
+    except Exception as e:
+        logging.error(f"Register error: {str(e)}")
+        return jsonify({"msg": "Error creating user"}), 500
+    finally:
+        if connection:
+            connection.close()
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    connection = None
+    try:
+        connection = pool.connection()
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT user_id, password_hash FROM app_users WHERE username = %s", (username,))
+            user = cursor.fetchone()
+
+            if user and check_password_hash(user['password_hash'], password):
+                # Identity must be a string for flask-jwt-extended
+                access_token = create_access_token(identity=str(user['user_id']))
+                return jsonify(access_token=access_token, user_id=user['user_id']), 200
+            else:
+                return jsonify({"msg": "Invalid username or password"}), 401
+    except Exception as e:
+        logging.error(f"Login error: {str(e)}")
+        return jsonify({"msg": "Login error"}), 500
+    finally:
+        if connection:
+            connection.close()
 
 @app.route('/write_to_db', methods=['POST'])
 def write_to_db():
@@ -215,7 +279,9 @@ def get_table_data(table_name):
             connection.close()
 
 @app.route('/generate_raw', methods=['POST'])
+@jwt_required()
 def generate_job():
+    current_user_id = get_jwt_identity()
     data = request.get_json()
     total_count = data.get('dataCount', 1)
     batch_size = 1000  # You can adjust this value as needed
@@ -237,6 +303,7 @@ def generate_job():
             count = min(batch_size, total_count - start)
             job_id = str(uuid.uuid4())
             message = {
+                'userId': current_user_id,
                 'parentJobId': parent_job_id, 
                 'jobId': job_id, 
                 'count': count,
@@ -258,7 +325,9 @@ def generate_job():
     }), 202
 
 @app.route('/get_raw_data/<parent_job_id>/<table_name>', methods=['GET'])
+@jwt_required()
 def get_raw_data(parent_job_id, table_name):
+    current_user_id = get_jwt_identity()
     try:
         with NoProxy():
             connection_string = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
@@ -268,7 +337,7 @@ def get_raw_data(parent_job_id, table_name):
             
             extracted_data = []
             # Check for chunks (virtual directory) using parent_job_id
-            blobs = list(container_client.list_blobs(name_starts_with=f"{parent_job_id}/"))
+            blobs = list(container_client.list_blobs(name_starts_with=f"{current_user_id}/{parent_job_id}/"))
             
             if blobs:
                 for blob in blobs:
@@ -279,10 +348,7 @@ def get_raw_data(parent_job_id, table_name):
                     chunk_extracted = [item.get(table_name) for item in chunk_data if item.get(table_name)]
                     extracted_data.extend(chunk_extracted)
                     
-                    # Stop if we have en
-                    # 
-                    # 
-                    # ough data
+                    # Stop if we have enough data
                     if len(extracted_data) >= 100:
                         extracted_data = extracted_data[:100]
                         break
@@ -298,6 +364,37 @@ def get_raw_data(parent_job_id, table_name):
         return jsonify({
             'success': False,
             'message': f'Error retrieving data: {str(e)}'
+        }), 500
+
+@app.route('/list_parent_jobs', methods=['GET'])
+@jwt_required()
+def list_parent_jobs():
+    current_user_id = get_jwt_identity()
+    try:
+        with NoProxy():
+            connection_string = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
+            blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+            container_name = 'shanlee-raw-data'
+            container_client = blob_service_client.get_container_client(container_name)
+
+            # List blobs with prefix <user_id>/
+            prefix = f"{current_user_id}/"
+            blobs = container_client.list_blobs(name_starts_with=prefix)
+            parent_job_ids = set()
+            for blob in blobs:
+                # blob.name: <user_id>/<parent_job_id>/<...>
+                parts = blob.name.split('/')
+                if len(parts) > 1:
+                    parent_job_ids.add(parts[1])
+            return jsonify({
+                'success': True,
+                'parentJobIds': sorted(parent_job_ids)
+            })
+    except Exception as e:
+        logging.error(f"Error listing parent jobs: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error listing parent jobs: {str(e)}'
         }), 500
 
 if __name__ == '__main__':

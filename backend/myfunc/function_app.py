@@ -17,6 +17,7 @@ def process_data_generation_job(azqueue: func.QueueMessage, signalR: func.Out[st
     try:
         # Parse job message
         message = json.loads(azqueue.get_body().decode('utf-8'))
+        user_id = message.get('userId')
         parent_job_id = message.get('parentJobId')
         job_id = message.get('jobId')
         count = int(message.get('count', 1))
@@ -54,8 +55,15 @@ def process_data_generation_job(azqueue: func.QueueMessage, signalR: func.Out[st
         # Upload to Azure Blob Storage
         blob_conn_str = os.environ.get('AzureWebJobsStorage')
         blob_service_client = BlobServiceClient.from_connection_string(blob_conn_str)
-        container_name = 'shanlee-raw-data'
-        blob_name = f'{parent_job_id}/{job_id}.json'
+        container_name = 'shanlee-raw-data'      
+        # Use user_id/parent_job_id as a virtual folder for data isolation
+        if user_id:
+            blob_name = f'{user_id}/{parent_job_id}/{job_id}.json'
+            prefix = f"{user_id}/{parent_job_id}/"
+        else:
+            # Fallback for legacy jobs without userId
+            blob_name = f'{parent_job_id}/{job_id}.json'
+            prefix = f"{parent_job_id}/"
         try:
             blob_service_client.create_container(container_name)
         except Exception:
@@ -63,7 +71,7 @@ def process_data_generation_job(azqueue: func.QueueMessage, signalR: func.Out[st
         blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
         blob_client.upload_blob(json.dumps(generated_data, default=str), overwrite=True)
         # Note: This is a simple check. For high concurrency/scale, consider using Table Storage or Durable Functions.
-        blobs = list(blob_service_client.get_container_client(container_name).list_blobs(name_starts_with=f"{parent_job_id}/"))
+        blobs = list(blob_service_client.get_container_client(container_name).list_blobs(name_starts_with=prefix))
         completed_count = len(blobs)
         
         if completed_count >= total_chunks:
