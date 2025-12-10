@@ -4,5 +4,3 @@ export { default as LeftMenu } from './LeftMenu';
 export { default as Login } from './Login';
 export { default as Signup } from './Signup';
 export { default as PrivateRoute } from './PrivateRoute';
-export { default as DataFolders } from './DataFolders';
-export { default as DataFolderDetail } from './DataFolderDetail';

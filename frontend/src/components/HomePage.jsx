@@ -1,52 +1,28 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTypewriterEffect, useDataFolders, useGenerateJob, useSessionStorage } from '../hooks';
-import { DATA_COUNT_LIMITS } from '../constants';
-import { validateDataCount } from '../utils';
-import Button from './ui/Button';
-import InputGroup from './ui/InputGroup';
-import Panel from './ui/Panel';
-import PageTitle from './ui/PageTitle';
-import Modal from './ui/Modal';
-import Login from './Login';
-import Signup from './Signup';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { useDataGeneration } from '../hooks/useDataGeneration';
+import { useDataFolders, useSessionStorage } from '../hooks';
+import AuthSection from './AuthSection';
+import DataGenerationPanel from './DataGenerationPanel';
+import ViewTableButton from './ViewTableButton';
 
 function HomePage() {
-  const [message, setMessage] = useState('');
-  // Controls visibility of the 'View Data Table' button
-  const [showViewTableButton, setShowViewTableButton] = useState(false);
-  // Tracks if the button has ever been shown in this session (persisted in sessionStorage)
   const [hasViewedTable, setHasViewedTable, removeHasViewedTable] = useSessionStorage('hasViewedTable', false);
-  const [dataCount, setDataCount] = useState(1);
-  const [parentJobId, setParentJobId] = useState(null);
-  
-  // Auth State
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
-  const [authMessage, setAuthMessage] = useState(''); // Message to show when unauthenticated user clicks generate
-
-  const navigate = useNavigate();
+  const [showViewTableButton, setShowViewTableButton] = useState(false);
 
   const { refresh: refreshFolders, hasFolder } = useDataFolders({ autoFetch: false });
-  const { generate, loading: generating } = useGenerateJob();
-
-  // Check login status on mount and fetch folders if logged in
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const loggedIn = !!token;
-    setIsLoggedIn(loggedIn);
-    if (loggedIn) refreshFolders();
-  }, [refreshFolders]);
+  
+  const auth = useAuth(refreshFolders);
+  const dataGen = useDataGeneration(auth.isLoggedIn, auth.setAuthMessage, refreshFolders);
 
   // Keep showArrow derived from login status, whether user viewed table this session, or if folders exist
   useEffect(() => {
-    if (isLoggedIn && (hasViewedTable || hasFolder)) {
+    if (auth.isLoggedIn && (hasViewedTable || hasFolder)) {
       setShowViewTableButton(true);
     } else {
       setShowViewTableButton(false);
     }
-  }, [isLoggedIn, hasViewedTable, hasFolder]);
+  }, [auth.isLoggedIn, hasViewedTable, hasFolder]);
 
   // On any refresh/hasFolder change: if there are no folders, clear the session flag
   // so a preserved `hasViewedTable` does not incorrectly keep the button visible.
@@ -56,132 +32,39 @@ function HomePage() {
       try {
         removeHasViewedTable();
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.warn('Failed clearing hasViewedTable from sessionStorage', e);
         setHasViewedTable(false);
       }
     }
   }, [hasFolder, removeHasViewedTable, setHasViewedTable]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
-    setIsLoggedIn(false);
-    setShowViewTableButton(false);
-    setHasViewedTable(false);
-    try {
-      removeHasViewedTable();
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn('Failed removing session flag on logout', e);
-    }
-    setMessage('');
-  };
-
-  const openAuthModal = (mode = 'login') => {
-    setAuthMode(mode);
-    setShowAuthModal(true);
-    setAuthMessage('');
-  };
-
-  const handleAuthSuccess = () => {
-    setIsLoggedIn(true);
-    setShowAuthModal(false);
-    setAuthMessage('');
-    // After successful login, refresh folder info
-    refreshFolders();
-  };
-
-  // Use custom typewriter hook
-  const displayedText = useTypewriterEffect(message);
-
-  // Handler for generating data
-  const handleClick = useCallback(async () => {
-    if (!isLoggedIn) {
-      setAuthMessage('Please sign up or login to generate data.');
-      return;
-    }
-
-    setShowViewTableButton(false);
-    setMessage("");
-    setParentJobId(null);
-    
-    try {
-      const data = await generate(dataCount);
-      setMessage(`Job submitted! ParentJob ID: ${data.parentJobId}, Status: ${data.status}`);
-      if (data.parentJobId) {
-        setParentJobId(data.parentJobId);
-        setShowViewTableButton(true);
-        refreshFolders(); // Refresh folder list after successful generation
-      }
-    } catch (error) {
-      console.error('Error submitting job:', error);
-      setMessage('Error submitting job.');
-      setShowViewTableButton(false);
-    }
-  }, [dataCount, isLoggedIn, generate, refreshFolders]);
-
   return (
     <div className="App relative">
-      {/* Top Right Auth Buttons */}
-      <div className="absolute top-4 right-4 flex gap-4 z-10">
-        {isLoggedIn ? (
-          <Button onClick={handleLogout}>Logout</Button>
-        ) : (
-          <>
-            <Button onClick={() => openAuthModal('login')}>Login</Button>
-            <Button onClick={() => openAuthModal('signup')}>Sign Up</Button>
-          </>
-        )}
-      </div>
+      <AuthSection
+        isLoggedIn={auth.isLoggedIn}
+        handleLogout={auth.handleLogout}
+        showAuthModal={auth.showAuthModal}
+        authMode={auth.authMode}
+        openAuthModal={auth.openAuthModal}
+        handleAuthSuccess={auth.handleAuthSuccess}
+      />
 
       <header className="App-header">
-        <PageTitle>My e-commerce Page</PageTitle>
-        
-        <Panel>
-          <InputGroup
-            label="Rows to generate:"
-            id="data-count"
-            type="number"
-            min={DATA_COUNT_LIMITS.MIN}
-            max={DATA_COUNT_LIMITS.MAX}
-            value={dataCount}
-            onChange={e => setDataCount(validateDataCount(e.target.value))}
-          />
-          <div className="flex flex-col items-center gap-2">
-            <Button onClick={handleClick} disabled={generating} variant="action">
-              {generating ? 'Generating...' : 'Generate Data'}
-            </Button>
-            {authMessage && <p className="text-red-400 text-sm animate-pulse">{authMessage}</p>}
-          </div>
-        </Panel>
-        {/* generation timing removed — not set anywhere (keeps UI clean) */}
-        {!generating && displayedText && <p className="typewriter-text">{displayedText}</p>}
-        {showViewTableButton && (
-          <Button
-            variant="primary"
-            onClick={() => {
-              setHasViewedTable(true);
-              navigate('/user-table', { state: { parentJobId: parentJobId } });
-            }}
-          >
-            <span>View Data Table →</span>
-          </Button>
-        )}
-      </header>
+        <DataGenerationPanel
+          dataCount={dataGen.dataCount}
+          setDataCount={dataGen.setDataCount}
+          handleClick={dataGen.handleClick}
+          generating={dataGen.generating}
+          message={dataGen.message}
+          authMessage={auth.authMessage}
+        />
 
-      {/* Auth Modal */}
-      <Modal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)}
-        title={authMode === 'login' ? 'Login' : 'Sign Up'}
-      >
-        {authMode === 'login' ? (
-          <Login onSuccess={handleAuthSuccess} switchToSignup={() => setAuthMode('signup')} />
-        ) : (
-          <Signup onSuccess={handleAuthSuccess} switchToLogin={() => setAuthMode('login')} />
-        )}
-      </Modal>
+        <ViewTableButton
+          showViewTableButton={showViewTableButton}
+          parentJobId={dataGen.parentJobId}
+          setHasViewedTable={setHasViewedTable}
+        />
+      </header>
     </div>
   );
 }

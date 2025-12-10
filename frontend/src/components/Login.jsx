@@ -19,6 +19,10 @@ function Login({ onSuccess, switchToSignup }) {
       
       if (response.ok) {
         localStorage.setItem('token', data.access_token);
+        // store refresh token for session continuation (dev use)
+        if (data.refresh_token) {
+          localStorage.setItem('refresh_token', data.refresh_token);
+        }
         localStorage.setItem('userId', data.user_id);
         onSuccess();
       } else {

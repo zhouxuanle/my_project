@@ -1,27 +1,17 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TableIcon, HomeIcon, DataIcon } from '../icons';
+import { HomeIcon, DataIcon } from '../icons';
 import MenuButton from './ui/MenuButton';
 
-// Left-side menu component: fixed vertical menu with two buttons
-function LeftMenu({ showTable, setShowTable }) {
+// Left-side menu component: fixed vertical menu with Data and Home
+function LeftMenu() {
   const navigate = useNavigate();
 
   return (
     <nav className="left-menu" aria-label="Primary">
       <MenuButton
         variant="small"
-        onClick={() => setShowTable(prev => !prev)}
-        aria-pressed={showTable}
-        title="Table List"
-      >
-        <TableIcon className="menu-icon" width={28} height={28} aria-hidden />
-      </MenuButton>
-      <div className="menu-label">Tables</div>
-
-      <MenuButton
-        variant="small"
-        onClick={() => navigate('/data')}
+        onClick={() => navigate('/user-table', { state: { openFolders: true } })}
         title="Data"
       >
         <DataIcon className="menu-icon" width={24} height={24} aria-hidden />

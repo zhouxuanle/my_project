@@ -5,18 +5,9 @@
 /* =========================================
    Global & Animations
    ========================================= */
-@keyframes blink-arrow {
-  0%, 100% { opacity: 1; transform: translateY(0); }
-  50% { opacity: 0.4; transform: translateY(10px); }
-}
-
 @keyframes blink {
   0%, 50% { border-color: white; }
   51%, 100% { border-color: transparent; }
-}
-
-.blinking-arrow {
-  animation: blink-arrow 1.2s infinite;
 }
 
 /* Remove arrows for number input fields */
@@ -95,23 +86,11 @@ input:focus {
   /* =========================================
      Data Table Page Specifics
      ========================================= */
-  .blinking-arrow-below {
-    display: flex;
-    justify-content: center;
-    margin-top: 8px;
-    margin-bottom: 0;
-    width: 100%;
-  }
-
+  /* (Blinking arrow styles removed) */
   /* =========================================
      Utilities
      ========================================= */
-  .arrow-button-style {
-    background: none;
-    border: none;
-    cursor: pointer;
-    outline: none;
-  }
+  /* (Arrow button styles removed) */
 
   .svg-block { display: block; }
   .empty-page-style { min-height: 800px; }

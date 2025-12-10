@@ -110,8 +110,6 @@ def list_parent_jobs():
             blob_service_client = BlobServiceClient.from_connection_string(connection_string)
             container_name = 'shanlee-raw-data'
             container_client = blob_service_client.get_container_client(container_name)
-
-            # List blobs with prefix <user_id>/
             prefix = f"{current_user_id}/"
             blobs = container_client.list_blobs(name_starts_with=prefix)
             parent_job_ids = set()
