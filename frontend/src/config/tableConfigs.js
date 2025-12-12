@@ -56,3 +56,8 @@ export const TABLE_CONFIGS = {
     fields: ['id', 'order_id', 'products_sku_id', 'quantity', 'create_time']
   }
 };
+
+export const TABLE_LIST = Object.keys(TABLE_CONFIGS).map((key) => ({
+  name: key,
+  label: TABLE_CONFIGS[key].label,
+}));

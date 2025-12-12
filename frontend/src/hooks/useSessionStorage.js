@@ -5,23 +5,19 @@ export default function useSessionStorage(key, initialValue) {
     try {
       const raw = sessionStorage.getItem(key);
       if (raw !== null) return JSON.parse(raw);
-      return typeof initialValue === 'function' ? initialValue() : initialValue;
+      return initialValue;
     } catch (e) {
-      // Fall back to initial value on any error
-      return typeof initialValue === 'function' ? initialValue() : initialValue;
+      return initialValue;
     }
   };
 
-  const [storedValue, setStoredValue] = useState(readValue);
+  const [storedValue, setStoredValue] = useState(readValue());
 
   const setValue = (value) => {
     try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      sessionStorage.setItem(key, JSON.stringify(valueToStore));
+      setStoredValue(value);
+      sessionStorage.setItem(key, JSON.stringify(value));
     } catch (e) {
-      // Non-fatal — log for debugging
-      // eslint-disable-next-line no-console
       console.warn(`useSessionStorage: failed to set ${key}`, e);
     }
   };
@@ -30,10 +26,9 @@ export default function useSessionStorage(key, initialValue) {
     try {
       sessionStorage.removeItem(key);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.warn(`useSessionStorage: failed to remove ${key}`, e);
     }
-    setStoredValue(typeof initialValue === 'function' ? initialValue() : initialValue);
+    setStoredValue(initialValue);
   };
 
   return [storedValue, setValue, remove];

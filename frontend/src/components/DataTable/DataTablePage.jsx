@@ -1,0 +1,80 @@
+import React, { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useWindowWidth, useDataFolders, useDataTablePage } from '../../hooks';
+import { getMaxColumns, getVisibleColumnsAndFields } from '../../utils';
+import LeftMenu from '../LeftMenu';
+import FoldersView from './FoldersView';
+import FolderTablesView from './FolderTablesView';
+import TableView from './TableView';
+import TablesMenuView from './TablesMenuView';
+
+function DataTablePage() {
+  const location = useLocation();
+  const locationParentJobId = location.state?.parentJobId;
+ 
+  const page = useDataTablePage({
+    locationState: location.state,
+    locationParentJobId,
+    locationKey: location.key,
+  });
+  
+  const { folders, loading: foldersLoading, error: foldersError } = useDataFolders({ autoFetch: true });
+
+  // Memoize table config for current active table
+  const currentTableConfig = page.currentTableConfig;
+
+  // Responsive: determine how many columns to show based on window width
+  const windowWidth = useWindowWidth();
+  
+  // Calculate visible columns and fields with responsive behavior
+  const { visibleColumns, visibleFields } = useMemo(() => {
+    const maxColumns = getMaxColumns(windowWidth, currentTableConfig.columns.length);
+    return getVisibleColumnsAndFields(currentTableConfig, maxColumns);
+  }, [windowWidth, currentTableConfig]);
+
+  const tables = page.tables;
+
+  return (
+    <div className={`App ${page.showTable ? 'app-with-left-menu' : ''}`}>
+      {page.showTable && <LeftMenu />}
+      
+      <header className="App-header">
+        <h1 className="page-title">Data Tables</h1>
+        
+        {page.mode === 'folders' ? (
+          <FoldersView
+            foldersLoading={foldersLoading}
+            foldersError={foldersError}
+            folders={folders}
+            onSelectFolder={page.selectFolder}
+            onBackToTables={page.backToTables}
+          />
+        ) : page.mode === 'folderTables' && page.selectedFolder ? (
+          <FolderTablesView
+            selectedFolder={page.selectedFolder}
+            tables={tables}
+            onOpenFolderTable={page.openFolderTable}
+            onBackToFolders={page.backToFolders}
+          />
+        ) : page.showTable ? (
+          <TableView
+            tableData={page.tableData}
+            visibleColumns={visibleColumns}
+            visibleFields={visibleFields}
+            activeTable={page.activeTable}
+            effectiveParentJobId={page.effectiveParentJobId}
+          />
+        ) : (
+          <TablesMenuView
+            tables={tables}
+            onSelectTable={page.handleTableSelect}
+          />
+        )}
+
+        <div className="empty-page empty-page-style"></div>
+      </header>
+    </div>
+  );
+}
+
+export default DataTablePage;

@@ -26,7 +26,7 @@ export function useAuth(refreshFolders) {
 
   const onAuthSuccess = () => {
     handleAuthSuccess();
-    if (refreshFolders) refreshFolders();
+    refreshFolders();
   };
 
   return {

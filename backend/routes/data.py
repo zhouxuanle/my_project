@@ -3,11 +3,13 @@ import time
 import logging
 from database import get_db_connection
 from generate_event_tracking_data import DataGenerator
+from flask_jwt_extended import jwt_required
 
 data_bp = Blueprint('data', __name__)
 gd = DataGenerator()
 
 @data_bp.route('/write_to_db', methods=['POST'])
+@jwt_required()
 def write_to_db():
     connection = None
     try:

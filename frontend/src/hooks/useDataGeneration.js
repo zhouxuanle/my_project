@@ -10,14 +10,14 @@ export function useDataGeneration(isLoggedIn, setAuthMessage, refreshFolders) {
     parentJobId,
     generating,
     setMessage,
-    setDataCount: setStoreDataCount,
+    setDataCountValue,
     setParentJobId,
     setGenerating,
   } = useDataStore();
 
+  // useGenerateJob() is a hook , not function
   const { generate } = useGenerateJob();
 
-  // Handler for generating data
   const handleClick = useCallback(async () => {
     if (!isLoggedIn) {
       setAuthMessage('Please sign up or login to generate data.');
@@ -44,7 +44,7 @@ export function useDataGeneration(isLoggedIn, setAuthMessage, refreshFolders) {
   }, [dataCount, isLoggedIn, generate, setAuthMessage, refreshFolders, setMessage, setParentJobId, setGenerating]);
 
   const handleSetDataCount = (value) => {
-    setStoreDataCount(validateDataCount(value));
+    setDataCountValue(validateDataCount(value));
   };
 
   return {

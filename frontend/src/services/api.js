@@ -22,32 +22,40 @@ const handleResponse = async (response) => {
   return response;
 };
 
-// Internal helper: perform fetch, attempt refresh on 401 and retry once
+const isTokenExpired = (token) => {
+  if (!token) return true;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const currentTime = Date.now() / 1000;
+    return payload.exp < currentTime;
+  } catch (e) {
+    return true;
+  }
+};
+
+// Internal helper: perform fetch, refresh token if needed, then retry
 const fetchWithAuth = async (input, init = {}) => {
-  init.headers = getHeaders(init.headers);
-  let res = await fetch(input, init);
-  if (res.status === 401) {
-    // try refresh
+  let token = localStorage.getItem('token');
+  if (token && isTokenExpired(token)) {
     try {
       const refreshRes = await api.refresh();
       const refreshBody = await refreshRes.json();
       if (refreshBody.access_token) {
         localStorage.setItem('token', refreshBody.access_token);
-        init.headers = getHeaders(init.headers);
-        res = await fetch(input, init);
+      } else {
+        throw new Error('No access token in refresh response');
       }
     } catch (e) {
-      // Refresh failed: clear stored tokens to avoid replaying invalid tokens
-      try {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refresh_token');
-        window.location.href = '/';
-      } catch (_) {}
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      window.location.href = '/';
       const err = new Error('Unauthorized - refresh failed');
       err.status = 401;
       throw err;
     }
   }
+  init.headers = getHeaders(init.headers);
+  const res = await fetch(input, init);
   return handleResponse(res);
 };
 
