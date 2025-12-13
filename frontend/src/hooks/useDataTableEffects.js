@@ -11,7 +11,6 @@ export default function useDataTableEffects({
     mode,
     activeTable,
     setLoading,
-    setShowTable,
     setTableData,
     initFromLocation,
   } = useDataTableStore();
@@ -25,7 +24,6 @@ export default function useDataTableEffects({
 
     // When opening folders view via navigation, match original resets.
     if (locationState?.openFolders) {
-      setShowTable(true);
       setTableData([]);
       setLoading(false);
     }
@@ -35,7 +33,6 @@ export default function useDataTableEffects({
     locationState?.tableName,
     locationKey,
     setLoading,
-    setShowTable,
     setTableData,
   ]);
 

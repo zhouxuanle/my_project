@@ -7,7 +7,6 @@ export default function useDataTableActions() {
     activeTable,
     setMode,
     setLoading,
-    setShowTable,
     setTableData,
     setActiveTable,
     setSelectedFolder,
@@ -17,14 +16,15 @@ export default function useDataTableActions() {
 
   const fetchTableData = useCallback(async ({ tableName, parentJobId }) => {
     try {
-      let response;
+      let data;
       if (parentJobId) {
-        response = await api.getRawData(parentJobId, tableName);
+        const response = await api.getRawData(parentJobId, tableName);
+        data = await response.json();
       } else {
-        response = await api.getTableData(tableName);
+        // Return a JSON with success evaluated to true, no API call
+        data = { success: true, [tableName]: [] };
       }
 
-      const data = await response.json();
       if (data.success) {
         setTableData(data[tableName] || []);
       } else {
@@ -43,7 +43,6 @@ export default function useDataTableActions() {
     (tableName, effectiveParentJobId) => {
       setTableData([]);
       setLoading(true);
-      setShowTable(true);
 
       if (tableName === activeTable) {
         fetchTableData({ tableName, parentJobId: effectiveParentJobId });
@@ -52,7 +51,7 @@ export default function useDataTableActions() {
 
       setActiveTable(tableName);
     },
-    [activeTable, fetchTableData, setActiveTable, setLoading, setShowTable, setTableData]
+    [activeTable, fetchTableData, setActiveTable, setLoading, setTableData]
   );
 
   const openFoldersMode = useCallback(() => {
@@ -74,10 +73,9 @@ export default function useDataTableActions() {
       setParentJobIdLocal(folder);
       setActiveTable(tableName);
       setMode('tables');
-      setShowTable(true);
       setLoading(true);
     },
-    [setActiveTable, setLoading, setMode, setParentJobIdLocal, setShowTable]
+    [setActiveTable, setLoading, setMode, setParentJobIdLocal]
   );
 
   const backToTables = useCallback(() => {

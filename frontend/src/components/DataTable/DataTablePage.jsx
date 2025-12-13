@@ -6,7 +6,6 @@ import LeftMenu from '../LeftMenu';
 import FoldersView from './FoldersView';
 import FolderTablesView from './FolderTablesView';
 import TableView from './TableView';
-import TablesMenuView from './TablesMenuView';
 
 function DataTablePage() {
   const location = useLocation();
@@ -35,8 +34,8 @@ function DataTablePage() {
   const tables = page.tables;
 
   return (
-    <div className={`App ${page.showTable ? 'app-with-left-menu' : ''}`}>
-      {page.showTable && <LeftMenu />}
+    <div className="App app-with-left-menu">
+      <LeftMenu />
       
       <header className="App-header">
         <h1 className="page-title">Data Tables</h1>
@@ -56,18 +55,13 @@ function DataTablePage() {
             onOpenFolderTable={page.openFolderTable}
             onBackToFolders={page.backToFolders}
           />
-        ) : page.showTable ? (
+        ) : (
           <TableView
             tableData={page.tableData}
             visibleColumns={visibleColumns}
             visibleFields={visibleFields}
             activeTable={page.activeTable}
             effectiveParentJobId={page.effectiveParentJobId}
-          />
-        ) : (
-          <TablesMenuView
-            tables={tables}
-            onSelectTable={page.handleTableSelect}
           />
         )}
 

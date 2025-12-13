@@ -12,7 +12,6 @@ export default function useDataTablePage({
   const {
     mode,
     loading,
-    showTable,
     tableData,
     activeTable,
     selectedFolder,
@@ -47,7 +46,6 @@ export default function useDataTablePage({
     // state
     mode,
     loading,
-    showTable,
     tableData,
     activeTable,
     selectedFolder,

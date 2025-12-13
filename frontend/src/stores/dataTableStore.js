@@ -6,7 +6,6 @@ const useDataTableStore = create((set) => ({
   // UI state
   mode: 'tables', // 'tables' | 'folders' | 'folderTables'
   loading: true,
-  showTable: true,
 
   // Data state
   tableData: [],
@@ -19,7 +18,6 @@ const useDataTableStore = create((set) => ({
   // Simple setters
   setMode: (mode) => set({ mode }),
   setLoading: (loading) => set({ loading }),
-  setShowTable: (showTable) => set({ showTable }),
   setTableData: (tableData) => set({ tableData }),
   setActiveTable: (activeTable) => set({ activeTable }),
   setSelectedFolder: (selectedFolder) => set({ selectedFolder }),
