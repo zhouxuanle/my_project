@@ -1,10 +1,10 @@
 import React from 'react';
-import { useTypewriterEffect } from '../hooks';
-import { DATA_COUNT_LIMITS } from '../constants';
-import Button from './ui/Button';
-import InputGroup from './ui/InputGroup';
-import Panel from './ui/Panel';
-import PageTitle from './ui/PageTitle';
+import { useTypewriterEffect } from '../../hooks';
+import { DATA_COUNT_LIMITS } from '../../constants';
+import Button from '../ui/Button';
+import InputGroup from '../ui/InputGroup';
+import Panel from '../ui/Panel';
+import PageTitle from '../ui/PageTitle';
 
 function DataGenerationPanel({ dataCount, setDataCount, handleClick, generating, message, authMessage }) {
   const displayedText = useTypewriterEffect(message);

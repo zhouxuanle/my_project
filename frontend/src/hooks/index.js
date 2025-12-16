@@ -1,6 +1,8 @@
-export { useTypewriterEffect } from './useTypewriterEffect';
-export { useWindowWidth } from './useWindowWidth';
+export { useAuth } from './HomePage/useAuth';
+export { useDataGeneration } from './HomePage/useDataGeneration';
+export { useTypewriterEffect } from './HomePage/useTypewriterEffect';
+export { useWindowWidth } from './DataTable/useWindowWidth';
 export { default as useDataFolders } from './useDataFolders';
-export { default as useGenerateJob } from './useGenerateJob';
-export { default as useSessionStorage } from './useSessionStorage';
-export { default as useDataTablePage } from './useDataTablePage';
+export { default as useGenerateJob } from './HomePage/useGenerateJob';
+export { default as useSessionStorage } from './HomePage/useSessionStorage';
+export { default as useDataTablePage } from './DataTable/useDataTablePage';

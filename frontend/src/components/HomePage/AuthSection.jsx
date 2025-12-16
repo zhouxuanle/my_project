@@ -1,8 +1,8 @@
 import React from 'react';
-import Button from './ui/Button';
-import Modal from './ui/Modal';
-import Login from './Login';
-import Signup from './Signup';
+import Button from '../ui/Button';
+import Modal from '../ui/Modal';
+import Login from '../Login';
+import Signup from '../Signup';
 
 function AuthSection({ isLoggedIn, handleLogout, showAuthModal, authMode, openAuthModal, handleAuthSuccess }) {
   return (

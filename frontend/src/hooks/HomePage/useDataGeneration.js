@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import useGenerateJob from './useGenerateJob';
-import useDataStore from '../stores/dataStore';
-import { validateDataCount } from '../utils';
+import useDataStore from '../../stores/HomePage/dataStore';
+import { validateDataCount } from '../../utils';
 
 export function useDataGeneration(isLoggedIn, setAuthMessage, refreshFolders) {
   const {

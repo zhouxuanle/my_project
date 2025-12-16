@@ -1,8 +1,7 @@
-import { useMemo } from 'react';
-import useDataTableStore from '../stores/dataTableStore';
-import { TABLE_CONFIGS, TABLE_LIST } from '../config/tableConfigs';
+import { useMemo, useEffect } from 'react';
+import useDataTableStore from '../../stores/DataTable/dataTableStore';
+import { TABLE_CONFIGS, TABLE_LIST } from '../../config/tableConfigs';
 import useDataTableActions from './useDataTableActions';
-import useDataTableEffects from './useDataTableEffects';
 
 export default function useDataTablePage({
   locationState,
@@ -11,31 +10,43 @@ export default function useDataTablePage({
 } = {}) {
   const {
     mode,
-    loading,
     tableData,
     activeTable,
     selectedFolder,
     parentJobIdLocal,
+    setLoading,
+    setMode,
+    resetFolderState,
   } = useDataTableStore();
 
   const effectiveParentJobId = locationParentJobId || parentJobIdLocal || null;
 
   const {
     fetchTableData,
-    handleTableSelect,
-    openFoldersMode,
     selectFolder,
     openFolderTable,
     backToTables,
     backToFolders,
   } = useDataTableActions();
 
-  useDataTableEffects({
-    locationState,
+  // Keep behavior: allow navigating to the same route with state (openFolders)
+  useEffect(() => {
+    if (locationState?.openFolders) {
+      setMode('folders');
+      resetFolderState();
+      setLoading(false);
+    }
+  }, [
+    locationState?.openFolders,
     locationKey,
-    effectiveParentJobId,
-    fetchTableData,
-  });
+  ]);
+
+  // Fetch data when activeTable changes (tables mode only)
+  useEffect(() => {
+    if (mode === 'tables') {
+      fetchTableData({ tableName: activeTable, parentJobId: effectiveParentJobId });
+    }
+  }, [activeTable, effectiveParentJobId, fetchTableData, mode]);
 
   const currentTableConfig = useMemo(
     () => TABLE_CONFIGS[activeTable],
@@ -45,7 +56,6 @@ export default function useDataTablePage({
   return {
     // state
     mode,
-    loading,
     tableData,
     activeTable,
     selectedFolder,
@@ -56,8 +66,6 @@ export default function useDataTablePage({
     currentTableConfig,
 
     // actions
-    handleTableSelect: (tableName) => handleTableSelect(tableName, effectiveParentJobId),
-    openFoldersMode,
     selectFolder,
     openFolderTable,
     backToTables,

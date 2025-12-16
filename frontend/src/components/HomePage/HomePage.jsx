@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { useDataGeneration } from '../hooks/useDataGeneration';
-import { useDataFolders, useSessionStorage } from '../hooks';
+import { useAuth } from '../../hooks';
+import { useDataGeneration } from '../../hooks';
+import { useDataFolders, useSessionStorage } from '../../hooks';
 import AuthSection from './AuthSection';
 import DataGenerationPanel from './DataGenerationPanel';
 import ViewTableButton from './ViewTableButton';

@@ -31,8 +31,6 @@ function DataTablePage() {
     return getVisibleColumnsAndFields(currentTableConfig, maxColumns);
   }, [windowWidth, currentTableConfig]);
 
-  const tables = page.tables;
-
   return (
     <div className="App app-with-left-menu">
       <LeftMenu />
@@ -51,7 +49,7 @@ function DataTablePage() {
         ) : page.mode === 'folderTables' && page.selectedFolder ? (
           <FolderTablesView
             selectedFolder={page.selectedFolder}
-            tables={tables}
+            tables={page.tables}
             onOpenFolderTable={page.openFolderTable}
             onBackToFolders={page.backToFolders}
           />

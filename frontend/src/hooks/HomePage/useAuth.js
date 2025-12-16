@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import useAuthStore from '../stores/authStore';
+import useAuthStore from '../../stores/HomePage/authStore';
 
 export function useAuth(refreshFolders) {
   const {

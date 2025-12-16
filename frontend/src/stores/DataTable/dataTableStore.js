@@ -25,18 +25,6 @@ const useDataTableStore = create((set) => ({
 
   // Helpers
   resetFolderState: () => set({ selectedFolder: null, parentJobIdLocal: null }),
-
-  initFromLocation: ({ tableName, openFolders } = {}) => {
-    // Keep behavior identical to previous local-state version.
-    if (openFolders) {
-      set({ mode: 'folders', selectedFolder: null, parentJobIdLocal: null });
-      return;
-    }
-
-    if (tableName) {
-      set({ activeTable: tableName });
-    }
-  },
 }));
 
 export default useDataTableStore;
