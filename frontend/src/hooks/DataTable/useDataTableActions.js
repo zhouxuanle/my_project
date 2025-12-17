@@ -14,6 +14,7 @@ export default function useDataTableActions() {
   } = useDataTableStore();
 
   const fetchTableData = useCallback(async ({ tableName, parentJobId }) => {
+    setLoading(true);
     try {
       let data;
       if (parentJobId && tableName) {
@@ -52,7 +53,6 @@ export default function useDataTableActions() {
       setParentJobIdLocal(folder);
       setActiveTable(tableName);
       setMode('tables');
-      setLoading(true);
     },
     []
   );

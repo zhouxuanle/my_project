@@ -60,6 +60,7 @@ function DataTablePage() {
             visibleFields={visibleFields}
             activeTable={page.activeTable}
             effectiveParentJobId={page.effectiveParentJobId}
+            loading={page.loading}
           />
         )}
 

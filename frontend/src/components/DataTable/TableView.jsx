@@ -7,10 +7,13 @@ function TableView({
   visibleFields,
   activeTable,
   effectiveParentJobId,
+  loading,
 }) {
   return (
     <TableContainer>
-      {tableData.length > 0 ? (
+      {loading ? (
+        <div>Loading...</div>
+      ) : tableData.length > 0 ? (
         <Table>
           <Thead>
             <Tr>

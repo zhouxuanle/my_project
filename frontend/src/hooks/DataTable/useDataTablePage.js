@@ -14,7 +14,7 @@ export default function useDataTablePage({
     activeTable,
     selectedFolder,
     parentJobIdLocal,
-    setLoading,
+    loading,
     setMode,
     resetFolderState,
   } = useDataTableStore();
@@ -34,7 +34,6 @@ export default function useDataTablePage({
     if (locationState?.openFolders) {
       setMode('folders');
       resetFolderState();
-      setLoading(false);
     }
   }, [
     locationState?.openFolders,
@@ -60,6 +59,7 @@ export default function useDataTablePage({
     activeTable,
     selectedFolder,
     effectiveParentJobId,
+    loading,
 
     // derived
     tables: TABLE_LIST,
