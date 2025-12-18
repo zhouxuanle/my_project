@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../hooks';
-import { useDataGeneration } from '../../hooks';
+import { useAuth, useDataGeneration } from '../../hooks';
 import { useDataFolders, useSessionStorage } from '../../hooks';
-import AuthSection from './AuthSection';
 import DataGenerationPanel from './DataGenerationPanel';
 import ViewTableButton from './ViewTableButton';
 
@@ -21,34 +19,20 @@ function HomePage() {
       setShowViewTableButton(true);
     } else {
       setShowViewTableButton(false);
+      // Clear session flag when folders are gone so the button won't persist
+      if (!hasFolder) {
+        try {
+          removeHasViewedTable();
+        } catch (e) {
+          console.warn('Failed clearing hasViewedTable from sessionStorage', e);
+          setHasViewedTable(false);
+        }
+      }
     }
   }, [auth.isLoggedIn, hasViewedTable, hasFolder]);
 
-  // On any refresh/hasFolder change: if there are no folders, clear the session flag
-  // so a preserved `hasViewedTable` does not incorrectly keep the button visible.
-  useEffect(() => {
-    if (!hasFolder) {
-      // Clear session flag when folders are gone so the button won't persist
-      try {
-        removeHasViewedTable();
-      } catch (e) {
-        console.warn('Failed clearing hasViewedTable from sessionStorage', e);
-        setHasViewedTable(false);
-      }
-    }
-  }, [hasFolder, removeHasViewedTable, setHasViewedTable]);
-
   return (
     <div className="App relative">
-      <AuthSection
-        isLoggedIn={auth.isLoggedIn}
-        handleLogout={auth.handleLogout}
-        showAuthModal={auth.showAuthModal}
-        authMode={auth.authMode}
-        openAuthModal={auth.openAuthModal}
-        handleAuthSuccess={auth.handleAuthSuccess}
-      />
-
       <header className="App-header">
         <DataGenerationPanel
           dataCount={dataGen.dataCount}

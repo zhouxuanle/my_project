@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import useAuthStore from '../../stores/HomePage/authStore';
+import useAuthStore from '../stores/authStore';
 
 export function useAuth(refreshFolders) {
   const {
@@ -10,11 +10,12 @@ export function useAuth(refreshFolders) {
     setIsLoggedIn,
     handleLogout,
     openAuthModal,
+    closeAuthModal,
     handleAuthSuccess,
     setAuthMessage,
   } = useAuthStore();
 
-  // Check login status on mount and fetch folders if logged in
+  // Check login status on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
     const loggedIn = !!token;
@@ -26,7 +27,16 @@ export function useAuth(refreshFolders) {
 
   const onAuthSuccess = () => {
     handleAuthSuccess();
-    refreshFolders();
+    if (refreshFolders) {
+      refreshFolders();
+    }
+  };
+
+  const onLogout = () => {
+    handleLogout();
+    if (refreshFolders) {
+      refreshFolders();
+    }
   };
 
   return {
@@ -34,8 +44,9 @@ export function useAuth(refreshFolders) {
     showAuthModal,
     authMode,
     authMessage,
-    handleLogout,
+    handleLogout: onLogout,
     openAuthModal,
+    closeAuthModal,
     handleAuthSuccess: onAuthSuccess,
     setAuthMessage,
   };

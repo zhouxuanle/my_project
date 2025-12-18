@@ -21,6 +21,10 @@ const useAuthStore = create((set) => ({
     set({ authMode: mode, showAuthModal: true, authMessage: '' });
   },
 
+  closeAuthModal: () => {
+    set({ showAuthModal: false, authMessage: '' });
+  },
+
   handleAuthSuccess: () => {
     set({ isLoggedIn: true, showAuthModal: false, authMessage: '' });
   },

@@ -1,28 +1,32 @@
 import React, { useState } from 'react';
-import Button from './ui/Button';
-import { api } from '../services/api';
+import Button from '../ui/Button';
+import { api } from '../../services/api';
 
-function Signup({ onSuccess, switchToLogin }) {
+function Login({ onSuccess, switchToSignup }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSignup = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const response = await api.register(username, password);
+      const response = await api.login(username, password);
       
       const data = await response.json();
       
       if (response.ok) {
-        // Auto login or just switch to login? Let's switch to login for now or auto-login if backend supported it.
-        // For simplicity, let's just tell user to login.
-        switchToLogin();
+        localStorage.setItem('token', data.access_token);
+        // store refresh token for session continuation (dev use)
+        if (data.refresh_token) {
+          localStorage.setItem('refresh_token', data.refresh_token);
+        }
+        localStorage.setItem('userId', data.user_id);
+        onSuccess();
       } else {
-        setError(data.msg || 'Signup failed');
+        setError(data.msg || 'Login failed');
       }
     } catch (err) {
       setError('Network error');
@@ -34,7 +38,7 @@ function Signup({ onSuccess, switchToLogin }) {
   return (
     <div className="flex flex-col gap-4">
       {error && <div className="bg-red-500/20 border border-red-500 text-red-200 p-3 rounded text-sm">{error}</div>}
-      <form onSubmit={handleSignup} className="flex flex-col gap-4">
+      <form onSubmit={handleLogin} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1 text-left">
           <label className="text-sm text-gray-300">Username</label>
           <input 
@@ -55,15 +59,15 @@ function Signup({ onSuccess, switchToLogin }) {
             required 
           />
         </div>
-        <Button type="submit" variant="primary" disabled={loading}>
-          {loading ? 'Signing up...' : 'Sign Up'}
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
         </Button>
       </form>
       <p className="text-sm text-gray-400 mt-2">
-        Already have an account? <button onClick={switchToLogin} className="text-blue-400 hover:underline">Login</button>
+        Don't have an account? <button onClick={switchToSignup} className="text-blue-400 hover:underline">Sign up</button>
       </p>
     </div>
   );
 }
 
-export default Signup;
+export default Login;

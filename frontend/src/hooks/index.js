@@ -1,4 +1,5 @@
-export { useAuth } from './HomePage/useAuth';
+export { useAuth } from './useAuth';
+export { useLayout } from './Layout/useLayout';
 export { useDataGeneration } from './HomePage/useDataGeneration';
 export { useTypewriterEffect } from './HomePage/useTypewriterEffect';
 export { useWindowWidth } from './DataTable/useWindowWidth';

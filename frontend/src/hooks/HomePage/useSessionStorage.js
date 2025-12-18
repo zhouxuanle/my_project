@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 export default function useSessionStorage(key, initialValue) {
   const readValue = () => {
@@ -13,23 +13,23 @@ export default function useSessionStorage(key, initialValue) {
 
   const [storedValue, setStoredValue] = useState(readValue());
 
-  const setValue = (value) => {
+  const setValue = useCallback((value) => {
     try {
       setStoredValue(value);
       sessionStorage.setItem(key, JSON.stringify(value));
     } catch (e) {
       console.warn(`useSessionStorage: failed to set ${key}`, e);
     }
-  };
+  }, [key]);
 
-  const remove = () => {
+  const remove = useCallback(() => {
     try {
       sessionStorage.removeItem(key);
     } catch (e) {
       console.warn(`useSessionStorage: failed to remove ${key}`, e);
     }
     setStoredValue(initialValue);
-  };
+  }, [key, initialValue]);
 
   return [storedValue, setValue, remove];
 }
