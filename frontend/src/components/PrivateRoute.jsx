@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { api } from '../services/api';
+import useAuthStore from '../stores/authStore';
 
 const PrivateRoute = () => {
-  const [checking, setChecking] = useState(true);
-  const [authed, setAuthed] = useState(false);
+  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const [checking, setChecking] = useState(false); // No initial checking
 
+  /*
   useEffect(() => {
     let mounted = true;
 
@@ -24,27 +26,25 @@ const PrivateRoute = () => {
             if (mounted) setAuthed(false);
           }
         } catch (e) {
-          // refresh failed -> clear tokens
           try { localStorage.removeItem('token'); localStorage.removeItem('refresh_token'); } catch (_) {}
           if (mounted) setAuthed(false);
         }
-      } else if (token) {
-        // No refresh token but access token exists — assume still valid for now
-        if (mounted) setAuthed(true);
-      } else {
+      } else if (!token) {
         if (mounted) setAuthed(false);
       }
-
-      if (mounted) setChecking(false);
+      // No need to set checking here
     };
 
-    check();
+    // Only run async check if we assumed auth from tokens
+    if (authed) {
+      check();
+    }
 
     return () => { mounted = false; };
-  }, []);
+  }, [authed]); // Depend on authed to re-run if needed
+  */
 
-  if (checking) return <div style={{ padding: 20 }}>Checking authentication...</div>;
-  return authed ? <Outlet /> : <Navigate to="/" />;
+  return isLoggedIn ? <Outlet /> : <Navigate to="/" />;
 };
 
 export default PrivateRoute;

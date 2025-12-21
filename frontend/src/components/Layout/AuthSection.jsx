@@ -24,27 +24,19 @@ function AuthSection({
             Logout
           </Button>
         ) : (
-          <>
-            <Button 
-              onClick={() => openAuthModal('login')}
-              className="bg-app-dark border border-app-hover text-white hover:bg-app-hover px-4 py-2 rounded transition-colors"
-            >
-              Login
-            </Button>
-            <Button 
-              onClick={() => openAuthModal('signup')}
-              className="bg-app-dark border border-app-hover text-white hover:bg-app-hover px-4 py-2 rounded transition-colors"
-            >
-              Sign Up
-            </Button>
-          </>
+          <Button 
+            onClick={() => openAuthModal('login')}
+            className="bg-app-dark border border-app-hover text-white hover:bg-app-hover px-4 py-2 rounded transition-colors"
+          >
+            Login/SignUp
+          </Button>
         )}
       </div>
 
       <Modal 
         isOpen={showAuthModal} 
         onClose={closeAuthModal}
-        title={authMode === 'login' ? 'Login' : 'Sign Up'}
+        title="Login / Sign Up"
       >
         {authMode === 'login' ? (
           <Login 

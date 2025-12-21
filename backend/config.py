@@ -17,6 +17,7 @@ class Config:
     # Keep reasonably short access token lifetime and longer refresh token lifetime
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'super-secret-key')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 900)))  # default 15 minutes
+    # JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 10)))  # default 10 seconds
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=int(os.environ.get('JWT_REFRESH_TOKEN_EXPIRES_DAYS', 7)))  # default 7 days
 
     # Azure Configuration

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 const useAuthStore = create((set) => ({
-  isLoggedIn: false,
+  isLoggedIn: !!localStorage.getItem('token'), // Initialize from localStorage to persist across refreshes
   showAuthModal: false,
   authMode: 'login',
   authMessage: '',

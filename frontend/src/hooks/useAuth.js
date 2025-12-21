@@ -17,37 +17,20 @@ export function useAuth(refreshFolders) {
 
   // Check login status on mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const loggedIn = !!token;
-    setIsLoggedIn(loggedIn);
-    if (loggedIn && refreshFolders) {
+    if (isLoggedIn && refreshFolders) {
       refreshFolders();
     }
-  }, [refreshFolders, setIsLoggedIn]);
-
-  const onAuthSuccess = () => {
-    handleAuthSuccess();
-    if (refreshFolders) {
-      refreshFolders();
-    }
-  };
-
-  const onLogout = () => {
-    handleLogout();
-    if (refreshFolders) {
-      refreshFolders();
-    }
-  };
+  }, [isLoggedIn, refreshFolders]);
 
   return {
     isLoggedIn,
     showAuthModal,
     authMode,
     authMessage,
-    handleLogout: onLogout,
+    handleLogout,
     openAuthModal,
     closeAuthModal,
-    handleAuthSuccess: onAuthSuccess,
+    handleAuthSuccess,
     setAuthMessage,
   };
 }
