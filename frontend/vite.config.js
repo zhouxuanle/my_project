@@ -11,6 +11,12 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,  // This will open the browser automatically
-    host: true   // This enables network access
+    host: true,   // This enables network access
+    proxy: {
+      '/api': {
+        target: 'http://localhost:7071',
+        changeOrigin: true,
+      },
+    },
   }
 });

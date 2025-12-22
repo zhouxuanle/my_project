@@ -7,3 +7,4 @@ export { default as useDataFolders } from './useDataFolders';
 export { default as useGenerateJob } from './HomePage/useGenerateJob';
 export { default as useSessionStorage } from './HomePage/useSessionStorage';
 export { default as useDataTablePage } from './DataTable/useDataTablePage';
+export { useSignalR } from './Layout/useSignalR';

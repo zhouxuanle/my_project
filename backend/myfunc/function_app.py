@@ -9,6 +9,12 @@ from generate_event_tracking_data import DataGenerator
 
 app = func.FunctionApp()
 
+@app.function_name(name="negotiate")
+@app.route(route="negotiate", auth_level=func.AuthLevel.ANONYMOUS)
+@app.generic_input_binding(arg_name="connectionInfo", type="signalRConnectionInfo", hubName="shanleeSignalR", connectionStringSetting="AZURE_SIGNALR_CONNECTION_STRING")
+def negotiate(req: func.HttpRequest, connectionInfo: str):
+    return func.HttpResponse(connectionInfo, mimetype="application/json")
+
 @app.queue_trigger(arg_name="azqueue", queue_name="data-generation-queue",
                    connection="AzureWebJobsStorage")
 @app.generic_output_binding(arg_name="signalR", type="signalR", hubName="shanleeSignalR", 
@@ -75,11 +81,12 @@ def process_data_generation_job(azqueue: func.QueueMessage, signalR: func.Out[st
         completed_count = len(blobs)
         
         if completed_count >= total_chunks:
+            log_msg = f'All {total_chunks} chunks completed for parent job {parent_job_id}. SignalR notification sent.'
             signalR.set(json.dumps({
                 'target': 'JobStatusUpdate',
-                'arguments': [{"jobId": parent_job_id, "status": "completed"}]
+                'arguments': [{"jobId": parent_job_id, "status": "completed", "message": log_msg}]
             }))
-            logging.info(f'All {total_chunks} chunks completed for parent job {parent_job_id}. SignalR notification sent.')
+            logging.info(log_msg)
         else:
             logging.info(f'Chunk {job_id} completed. Progress: {completed_count}/{total_chunks} for parent job {parent_job_id}.')
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { BellIcon } from '../../icons';
 import AuthSection from './AuthSection';
 
-const Navbar = ({ auth, togglePanel }) => (
+const Navbar = ({ auth, togglePanel, notificationCount }) => (
   <header className="fixed top-0 left-0 right-0 bg-app-dark border-b border-app-hover z-30">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between items-center h-16">
@@ -24,9 +24,11 @@ const Navbar = ({ auth, togglePanel }) => (
             onClick={togglePanel}
           >
             <BellIcon className="w-6 h-6" />
-            <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
-              3
-            </span>
+            {notificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                {notificationCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
