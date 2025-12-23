@@ -1,70 +1,135 @@
-# Getting Started with Create React App
+# Frontend - E-commerce Data Generation Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React frontend application built with Vite and Tailwind CSS.
+
+## Tech Stack
+
+- **React 19.2.0** - UI library
+- **Vite 4.5.0** - Build tool and dev server
+- **Tailwind CSS 3.3.5** - Utility-first CSS framework
+- **React Router DOM 6.8.0** - Client-side routing
+- **Zustand 5.0.9** - State management
+- **SignalR 8.0.0** - Real-time communication
+- **jwt-decode 4.0.0** - JWT token decoding
 
 ## Available Scripts
 
-In the project directory, you can run:
+### `npm run dev`
 
-### `npm start`
-
-Runs the app in the development mode.\
+Runs the app in development mode with Vite dev server.\
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+The page will hot-reload when you make changes.\
+You may also see lint errors in the console.
 
 ### `npm test`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Launches the test runner in watch mode.\
+Uses React Testing Library and Jest for testing.
 
 ### `npm run build`
 
-Builds the app for production to the `build` folder.\
+Builds the app for production to the `dist` folder.\
 It correctly bundles React in production mode and optimizes the build for the best performance.
 
-The build is minified and the filenames include the hashes.\
+The build is minified and the filenames include hashes.\
 Your app is ready to be deployed!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### `npm run preview`
 
-### `npm run eject`
+Locally preview the production build.\
+Useful for testing the production build before deployment.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Project Structure
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```
+frontend/
+├── src/
+│   ├── components/      # React components
+│   │   ├── Layout.jsx
+│   │   ├── HomePage.jsx
+│   │   ├── DataTablePage.jsx
+│   │   └── PrivateRoute.jsx
+│   ├── stores/          # Zustand state stores
+│   │   ├── authStore.js
+│   │   └── dataStore.js
+│   ├── services/        # API service functions
+│   │   └── api.js
+│   ├── config/          # Configuration
+│   ├── hooks/           # Custom React hooks
+│   ├── utils/           # Utility functions
+│   ├── icons/           # Icon components
+│   ├── App.jsx          # Main application component
+│   └── index.jsx        # Application entry point
+├── public/              # Static assets
+├── index.html           # HTML template
+├── vite.config.js       # Vite configuration
+├── tailwind.config.js   # Tailwind CSS configuration
+└── package.json         # Dependencies and scripts
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Key Features
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+- **Authentication**: Login/register with JWT token management
+- **Protected Routes**: Route guards for authenticated users
+- **Data Generation**: Interface for generating e-commerce data
+- **Real-time Updates**: SignalR integration for job notifications
+- **Data Tables**: View generated data across multiple tables
+- **Responsive Design**: Mobile-friendly UI with Tailwind CSS
+
+## Development
+
+### Prerequisites
+
+- Node.js 14 or higher
+- npm or yarn
+
+### Setup
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Configure API endpoint in `src/config` if needed
+
+3. Start development server:
+```bash
+npm run dev
+```
+
+### Environment Variables
+
+Create `.env` file if needed:
+
+```env
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+Access in code:
+```javascript
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
+```
+
+## Building for Production
+
+1. Build the project:
+```bash
+npm run build
+```
+
+2. Preview the build locally:
+```bash
+npm run preview
+```
+
+3. Deploy the `dist` folder to your hosting service
 
 ## Learn More
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- [Vite Documentation](https://vitejs.dev/)
+- [React Documentation](https://react.dev/)
+- [Tailwind CSS Documentation](https://tailwindcss.com/)
+- [Zustand Documentation](https://github.com/pmndrs/zustand)
 
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+For complete project documentation, see the main [README.md](../README.md) in the root directory.
