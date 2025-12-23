@@ -7,7 +7,6 @@ export function useAuth(refreshFolders) {
     showAuthModal,
     authMode,
     authMessage,
-    setIsLoggedIn,
     handleLogout,
     openAuthModal,
     closeAuthModal,
@@ -20,7 +19,7 @@ export function useAuth(refreshFolders) {
     if (isLoggedIn && refreshFolders) {
       refreshFolders();
     }
-  }, [isLoggedIn, refreshFolders]);
+  }, [isLoggedIn,refreshFolders]);
 
   return {
     isLoggedIn,

@@ -34,7 +34,7 @@ export function useDataGeneration(isLoggedIn, setAuthMessage, refreshFolders) {
       if (data.parentJobId) {
         setParentJobId(data.parentJobId);
       }
-      if (refreshFolders) refreshFolders(); // Refresh folders after generation
+      console.log('Data generation job submitted:', data);
     } catch (error) {
       console.error('Error submitting job:', error);
       setMessage('Error submitting job.');

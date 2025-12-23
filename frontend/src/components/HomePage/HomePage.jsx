@@ -16,9 +16,6 @@ function HomePage() {
   // Keep showArrow derived from login status, whether user viewed table this session, or if folders exist
   useEffect(() => {
     if (auth.isLoggedIn && (hasViewedTable || hasFolder)) {
-      setShowViewTableButton(true);
-    } else {
-      setShowViewTableButton(false);
       // Clear session flag when folders are gone so the button won't persist
       if (!hasFolder) {
         try {
@@ -28,6 +25,9 @@ function HomePage() {
           setHasViewedTable(false);
         }
       }
+      setShowViewTableButton(true);
+    } else {
+      setShowViewTableButton(false);
     }
   }, [auth.isLoggedIn, hasViewedTable, hasFolder]);
 
@@ -41,6 +41,7 @@ function HomePage() {
           generating={dataGen.generating}
           message={dataGen.message}
           authMessage={auth.authMessage}
+          refreshFolders={refreshFolders}
         />
 
         <ViewTableButton

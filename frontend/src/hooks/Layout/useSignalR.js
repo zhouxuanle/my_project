@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { HubConnectionBuilder } from '@microsoft/signalr';
 
+// Global flag to ensure the event handler is set only once
+let handlerSet = false;
+
 export function useSignalR(addNotification) {
   const connectionRef = useRef(null);
   const connectingRef = useRef(false);
@@ -22,14 +25,18 @@ export function useSignalR(addNotification) {
           .withAutomaticReconnect()
           .build();
 
-        connection.on('JobStatusUpdate', (data) => {
-          const jobData = Array.isArray(data) ? data[0] : data;
-          addNotification('job', {
-            id: `${jobData.jobId}-${Date.now()}`,
-            message: jobData.message || 'Job completed',
-            timestamp: new Date().toISOString(),
+        // Set the event handler only once globally
+        if (!handlerSet) {
+          connection.on('JobStatusUpdate', (data) => {
+            const jobData = Array.isArray(data) ? data[0] : data;
+            addNotification('job', {
+              id: `${jobData.jobId}-${Date.now()}`,
+              message: jobData.message || 'Job completed',
+              timestamp: new Date().toISOString(),
+            });
           });
-        });
+          handlerSet = true;
+        }
 
         await connection.start();
         connectionRef.current = connection;
@@ -48,5 +55,5 @@ export function useSignalR(addNotification) {
         connectionRef.current = null;
       }
     };
-  }, [addNotification]);
+  }, []);
 }
