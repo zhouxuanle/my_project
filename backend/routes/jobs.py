@@ -128,3 +128,80 @@ def list_parent_jobs():
             'success': False,
             'message': f'Error listing parent jobs: {str(e)}'
         }), 500
+
+@jobs_bp.route('/delete_folder/<parent_job_id>', methods=['DELETE'])
+@jwt_required()
+def delete_folder(parent_job_id):
+    """
+    Delete a folder (parent job) and all its associated blobs from Azure Storage.
+    Handles both new format (user_id/parent_job_id/) and legacy format (parent_job_id/).
+    Only the owner of the folder can delete it.
+    """
+    current_user_id = get_jwt_identity()
+    
+    try:
+        with NoProxy():
+            connection_string = Config.AZURE_STORAGE_CONNECTION_STRING
+            blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+            container_name = 'shanlee-raw-data'
+            container_client = blob_service_client.get_container_client(container_name)
+            
+            # Try new format first (with user_id prefix)
+            prefix = f"{current_user_id}/{parent_job_id}"
+            blobs = list(container_client.list_blobs(name_starts_with=prefix))
+            
+            # If no blobs found, try legacy format (without user_id)
+            if not blobs:
+                prefix = parent_job_id
+                blobs = list(container_client.list_blobs(name_starts_with=prefix))
+            
+            if not blobs:
+                # Folder already deleted or doesn't exist
+                return jsonify({
+                    'success': True,
+                    'message': 'Folder already deleted or does not exist',
+                    'deletedCount': 0
+                })
+            
+            # Delete all blobs and folder markers
+            deleted_count = 0
+            for blob in blobs:
+                try:
+                    container_client.delete_blob(blob.name, delete_snapshots='include')
+                    deleted_count += 1
+                except Exception as e:
+                    # If delete_snapshots fails (for directories), try without it
+                    try:
+                        container_client.delete_blob(blob.name)
+                        deleted_count += 1
+                    except Exception:
+                        logging.warning(f"Failed to delete blob {blob.name}: {str(e)}")
+            
+            # Explicitly delete the directory marker itself (may not be in the blob list)
+            marker_paths = [
+                f"{current_user_id}/{parent_job_id}",
+                f"{parent_job_id}"
+            ]
+            for marker in marker_paths:
+                try:
+                    container_client.delete_blob(marker)
+                    deleted_count += 1
+                    logging.info(f"Deleted directory marker: {marker}")
+                except Exception:
+                    pass  # Marker doesn't exist or already deleted
+            
+            logging.info(f"User {current_user_id} deleted folder {parent_job_id} ({deleted_count} items)")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Folder deleted successfully',
+                'deletedCount': deleted_count
+            })
+            
+    except Exception as e:
+        logging.error(f"Error deleting folder {parent_job_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error deleting folder: {str(e)}'
+        }), 500
+

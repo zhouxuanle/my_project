@@ -104,6 +104,12 @@ export const api = {
     return fetchWithAuth(`${API_BASE_URL}/list_parent_jobs`, { method: 'GET' });
   },
 
+  deleteFolder: async (parentJobId) => {
+    return fetchWithAuth(`${API_BASE_URL}/delete_folder/${parentJobId}`, { 
+      method: 'DELETE' 
+    });
+  },
+
   // Refresh access token using refresh token
   refresh: async () => {
     const refreshToken = localStorage.getItem('refresh_token');

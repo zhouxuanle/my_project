@@ -17,7 +17,7 @@ function DataTablePage() {
     locationKey: location.key,
   });
   
-  const { folders, loading: foldersLoading, error: foldersError } = useDataFolders({ autoFetch: true });
+  const { folders, loading: foldersLoading, error: foldersError, deleteFolder } = useDataFolders({ autoFetch: true });
 
   // Memoize table config for current active table
   const currentTableConfig = page.currentTableConfig;
@@ -45,6 +45,7 @@ function DataTablePage() {
             folders={folders}
             onSelectFolder={page.selectFolder}
             onBackToTables={page.backToTables}
+            onDeleteFolder={deleteFolder}
           />
         ) : page.mode === 'folderTables' && page.selectedFolder ? (
           <FolderTablesView

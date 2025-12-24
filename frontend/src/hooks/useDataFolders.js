@@ -10,7 +10,6 @@ export default function useDataFolders({ autoFetch = false } = {}) {
   const { hasFolder, setHasFolder } = useDataStore();
 
   const fetchFolders = useCallback(async () => {
-    console.log('Fetching data folders...');
     setLoading(true);
     setError(null);
     try {
@@ -30,8 +29,30 @@ export default function useDataFolders({ autoFetch = false } = {}) {
     } finally {
       setLoading(false);
     }
-    console.log('hasFolder:', hasFolder)
-  }, [setHasFolder]);
+  }, []); // Empty deps - setHasFolder is stable from Zustand store
+
+  const deleteFolder = useCallback(async (parentJobId) => {
+    try {
+      const res = await api.deleteFolder(parentJobId);
+      const data = await res.json();
+      
+      if (data.success) {
+        // Refresh the folder list from server to ensure consistency
+        await fetchFolders();
+        return { success: true };
+      } else {
+        throw new Error(data.message || 'Failed to delete folder');
+      }
+    } catch (err) {
+      // If 404, folder is already gone - refresh list and treat as success
+      if (err.status === 404) {
+        await fetchFolders();
+        return { success: true };
+      }
+      setError(err);
+      throw err;
+    }
+  }, [fetchFolders]); // Removed setError - it's a stable setState function
 
   useEffect(() => {
     if (autoFetch) fetchFolders();
@@ -42,6 +63,7 @@ export default function useDataFolders({ autoFetch = false } = {}) {
     loading,
     error,
     refresh: fetchFolders,
+    deleteFolder,
     hasFolder,
   };
 }

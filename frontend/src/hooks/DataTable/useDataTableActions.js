@@ -22,7 +22,7 @@ export default function useDataTableActions() {
         data = await response.json();
       } else {
         // Return a JSON with success evaluated to true, no API call
-        data = { success: true, [tableName]: tableData || [] };
+        data = { success: true, [tableName]: [] };
       }
 
       if (data.success) {
@@ -38,7 +38,7 @@ export default function useDataTableActions() {
       setLoading(false);
       setMode('');
     }
-  }, [tableData]);
+  }, []); // Empty deps - all setters are stable from Zustand
 
   const selectFolder = useCallback(
     (folder) => {

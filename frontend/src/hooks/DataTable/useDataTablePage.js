@@ -38,6 +38,8 @@ export default function useDataTablePage({
   }, [
     locationState?.openFolders,
     locationKey,
+    setMode,
+    resetFolderState,
   ]);
 
   // Fetch data when activeTable changes (tables mode only)

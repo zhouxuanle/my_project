@@ -8,19 +8,27 @@ function FolderTablesView({
   onBackToFolders,
 }) {
   return (
-    <div className="center-button-container">
-      <h2 className="text-lg font-semibold mb-4">Folder: {selectedFolder}</h2>
-      {tables.map((table) => (
-        <Button
-          key={table.name}
-          variant="table"
-          onClick={() => onOpenFolderTable(selectedFolder, table.name)}
-        >
-          {table.label}
-        </Button>
-      ))}
-      <div style={{ marginTop: 12 }}>
-        <Button variant="secondary" onClick={onBackToFolders}>Back to folders</Button>
+    <div className="flex flex-col items-center w-full px-4">
+      <h2 className="text-3xl font-bold mb-8">Folder: {selectedFolder}</h2>
+      
+      <div className="w-full max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          {tables.map((table) => (
+            <Button 
+              key={table.name}
+              variant="table"
+              onClick={() => onOpenFolderTable(selectedFolder, table.name)}
+            >
+              {table.label}
+            </Button>
+          ))}
+        </div>
+
+        <div className="flex justify-center mt-8">
+          <Button variant="secondary" onClick={onBackToFolders}>
+            Back to folders
+          </Button>
+        </div>
       </div>
     </div>
   );

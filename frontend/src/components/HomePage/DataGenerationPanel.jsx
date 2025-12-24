@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useTypewriterEffect, useLayout } from '../../hooks';
+import { useTypewriterEffect } from '../../hooks';
+import useLayoutStore from '../../stores/Layout/layoutStore';
 import { DATA_COUNT_LIMITS } from '../../constants';
 import Button from '../ui/Button';
 import InputGroup from '../ui/InputGroup';
@@ -7,7 +8,7 @@ import Panel from '../ui/Panel';
 import PageTitle from '../ui/PageTitle';
 
 function DataGenerationPanel({ dataCount, setDataCount, handleClick, generating, message, authMessage, refreshFolders }) {
-  const { notifications } = useLayout();
+  const { notifications } = useLayoutStore();
   const [currentMessage, setCurrentMessage] = useState(message);
 
   // Update currentMessage when message prop changes (for submitted message)
