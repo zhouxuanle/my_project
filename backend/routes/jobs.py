@@ -146,49 +146,24 @@ def delete_folder(parent_job_id):
             container_name = 'shanlee-raw-data'
             container_client = blob_service_client.get_container_client(container_name)
             
-            # Try new format first (with user_id prefix)
             prefix = f"{current_user_id}/{parent_job_id}"
             blobs = list(container_client.list_blobs(name_starts_with=prefix))
             
-            # If no blobs found, try legacy format (without user_id)
-            if not blobs:
-                prefix = parent_job_id
-                blobs = list(container_client.list_blobs(name_starts_with=prefix))
+            # Separate JSON files and directories
+            json_blobs = [blob for blob in blobs if blob.name.endswith('.json')]
+            dir_blobs = [blob for blob in blobs if not blob.name.endswith('.json')]
             
-            if not blobs:
-                # Folder already deleted or doesn't exist
-                return jsonify({
-                    'success': True,
-                    'message': 'Folder already deleted or does not exist',
-                    'deletedCount': 0
-                })
-            
-            # Delete all blobs and folder markers
             deleted_count = 0
-            for blob in blobs:
-                try:
-                    container_client.delete_blob(blob.name, delete_snapshots='include')
-                    deleted_count += 1
-                except Exception as e:
-                    # If delete_snapshots fails (for directories), try without it
-                    try:
-                        container_client.delete_blob(blob.name)
-                        deleted_count += 1
-                    except Exception:
-                        logging.warning(f"Failed to delete blob {blob.name}: {str(e)}")
             
-            # Explicitly delete the directory marker itself (may not be in the blob list)
-            marker_paths = [
-                f"{current_user_id}/{parent_job_id}",
-                f"{parent_job_id}"
-            ]
-            for marker in marker_paths:
-                try:
-                    container_client.delete_blob(marker)
-                    deleted_count += 1
-                    logging.info(f"Deleted directory marker: {marker}")
-                except Exception:
-                    pass  # Marker doesn't exist or already deleted
+            # Delete JSON files first (don't count them)
+            for blob in json_blobs:
+                container_client.delete_blob(blob.name)
+            
+            # Then delete directories (count these)
+            for blob in dir_blobs:
+                container_client.delete_blob(blob.name)
+                deleted_count += 1
+  
             
             logging.info(f"User {current_user_id} deleted folder {parent_job_id} ({deleted_count} items)")
             

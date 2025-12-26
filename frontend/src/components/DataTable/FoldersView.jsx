@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import Button from '../ui/Button';
 import FolderCard from './FolderCard';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
@@ -12,46 +12,19 @@ function FoldersView({
   onBackToTables,
   onDeleteFolder,
 }) {
-  const [isDeleteMode, setIsDeleteMode] = useState(false);
-  const [selectedFolders, setSelectedFolders] = useState([]);
-
   const {
+    selectedFolders,
     deletingFolder,
     confirmDelete,
     deleteError,
+    handleToggleFolder,
+    handleSelectAll,
     handleDeleteClick,
     handleConfirmDelete,
     handleCancelDelete,
-  } = useFolderDelete(onDeleteFolder);
+  } = useFolderDelete(onDeleteFolder, folders);
 
-  const handleToggleDeleteMode = useCallback(() => {
-    setIsDeleteMode(prev => !prev);
-    setSelectedFolders([]);
-  }, []);
-
-  const handleToggleFolder = useCallback((folder) => {
-    setSelectedFolders(prev => 
-      prev.includes(folder) 
-        ? prev.filter(f => f !== folder)
-        : [...prev, folder]
-    );
-  }, []);
-
-  const handleConfirmSelection = useCallback(() => {
-    if (selectedFolders.length > 0) {
-      handleDeleteClick(null, selectedFolders);
-    }
-  }, [selectedFolders, handleDeleteClick]);
-
-  const handleBulkDeleteConfirm = useCallback(async () => {
-    await handleConfirmDelete();
-    setIsDeleteMode(false);
-    setSelectedFolders([]);
-  }, [handleConfirmDelete]);
-
-  const handleBulkDeleteCancel = useCallback(() => {
-    handleCancelDelete();
-  }, [handleCancelDelete]);
+  const allSelected = folders.length > 0 && selectedFolders.length === folders.length;
 
   return (
     <div className="flex flex-col items-center w-full px-4">
@@ -74,30 +47,38 @@ function FoldersView({
 
         {!foldersLoading && !foldersError && folders.length > 0 && (
           <>
-            <div className="mb-4 flex gap-3">
+            {/* Header with master checkbox and delete button */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={handleSelectAll}
+                  aria-label="Select all folders"
+                  className="w-5 h-5 cursor-pointer accent-red-500 rounded border-2 border-gray-300"
+                />
+                <span className="text-sm text-gray-600">
+                  {allSelected ? 'all folders are selected' : 'Select all to delete'}
+                </span>
+              </div>
+              
               <Button
-                variant={isDeleteMode ? "secondary" : "primary"}
-                onClick={handleToggleDeleteMode}
+                variant="primary"
+                onClick={() => handleDeleteClick(selectedFolders)}
+                disabled={selectedFolders.length === 0}
+                className={selectedFolders.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}
               >
-                {isDeleteMode ? 'Cancel' : 'Delete Folders'}
+                Delete Selected ({selectedFolders.length})
               </Button>
-              {isDeleteMode && selectedFolders.length > 0 && (
-                <Button
-                  variant="primary"
-                  onClick={handleConfirmSelection}
-                >
-                  Confirm ({selectedFolders.length})
-                </Button>
-              )}
             </div>
 
+            {/* Folder grid with checkboxes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               {folders.map((folder) => (
                 <FolderCard
                   key={folder}
                   folder={folder}
                   onSelect={onSelectFolder}
-                  isDeleteMode={isDeleteMode}
                   isSelected={selectedFolders.includes(folder)}
                   onToggleSelect={handleToggleFolder}
                   isDeleting={deletingFolder === folder}
@@ -118,8 +99,8 @@ function FoldersView({
         <DeleteConfirmationModal
           folderName={confirmDelete}
           error={deleteError}
-          onConfirm={handleBulkDeleteConfirm}
-          onCancel={handleBulkDeleteCancel}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
         />
       )}
     </div>

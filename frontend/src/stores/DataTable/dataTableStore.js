@@ -14,6 +14,7 @@ const useDataTableStore = create((set) => ({
   // Folder navigation state
   selectedFolder: null,
   parentJobIdLocal: null,
+  selectedFolders: [], // For bulk selection
 
   // Simple setters
   setMode: (mode) => set({ mode }),
@@ -22,9 +23,10 @@ const useDataTableStore = create((set) => ({
   setActiveTable: (activeTable) => set({ activeTable }),
   setSelectedFolder: (selectedFolder) => set({ selectedFolder }),
   setParentJobIdLocal: (parentJobIdLocal) => set({ parentJobIdLocal }),
+  setSelectedFolders: (selectedFolders) => set({ selectedFolders }),
 
   // Helpers
-  resetFolderState: () => set({ selectedFolder: null, parentJobIdLocal: null }),
+  resetFolderState: () => set({ selectedFolder: null, parentJobIdLocal: null, selectedFolders: [] }),
 }));
 
 export default useDataTableStore;
