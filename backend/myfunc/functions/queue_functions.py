@@ -6,9 +6,14 @@ import logging
 import os
 import json
 import sys
+import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from azure.storage.blob import BlobServiceClient
+from azure.data.tables import TableServiceClient, UpdateMode
+from azure.core.exceptions import ResourceNotFoundError, ResourceExistsError, HttpResponseError
+from azure.core import MatchConditions
 from generate_event_tracking_data import DataGenerator
+from notification_storage import NotificationStorage
 
 
 def register_queue_functions(app: func.FunctionApp):
@@ -70,31 +75,90 @@ def register_queue_functions(app: func.FunctionApp):
             blob_conn_str = os.environ.get('AzureWebJobsStorage')
             blob_service_client = BlobServiceClient.from_connection_string(blob_conn_str)
             container_name = 'shanlee-raw-data'      
-            # Use user_id/parent_job_id as a virtual folder for data isolation
-            if user_id:
-                blob_name = f'{user_id}/{parent_job_id}/{job_id}.json'
-                prefix = f"{user_id}/{parent_job_id}/"
-            else:
-                # Fallback for legacy jobs without userId
-                blob_name = f'{parent_job_id}/{job_id}.json'
-                prefix = f"{parent_job_id}/"
-            try:
-                blob_service_client.create_container(container_name)
-            except Exception:
-                pass  
+            blob_name = f'{user_id}/{parent_job_id}/{job_id}.json'
             blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
             blob_client.upload_blob(json.dumps(generated_data, default=str), overwrite=True)
-            # Note: This is a simple check. For high concurrency/scale, consider using Table Storage or Durable Functions.
-            blobs = list(blob_service_client.get_container_client(container_name).list_blobs(name_starts_with=prefix))
-            completed_count = len(blobs)
+
+            # Use Table Storage to track progress with atomic increment and retry logic
+            table_service_client = TableServiceClient.from_connection_string(blob_conn_str)
+            table_name = 'JobProgress'
+            
+            table_client = table_service_client.get_table_client(table_name)
+            
+            # Atomic increment with retry logic for high concurrency
+            max_retries = 10
+            completed_count = 0
+            
+            for attempt in range(max_retries):
+                try:
+                    # Try to get existing entity
+                    entity = table_client.get_entity(partition_key=user_id, row_key=parent_job_id)
+                    completed_count = entity['completed_count'] + 1
+                    entity['completed_count'] = completed_count
+                    # Use MERGE mode with ETag for optimistic concurrency
+                    table_client.update_entity(entity, mode=UpdateMode.MERGE, etag=entity.metadata['etag'], match_condition=MatchConditions.IfNotModified)
+                    break  # Success, exit retry loop
+                    
+                except ResourceNotFoundError:
+                    # Entity doesn't exist, try to create it
+                    entity = {
+                        'PartitionKey': user_id,
+                        'RowKey': parent_job_id,
+                        'completed_count': 1,
+                        'total_chunks': total_chunks
+                    }
+                    try:
+                        table_client.create_entity(entity)
+                        completed_count = 1
+                        break  # Success, exit retry loop
+                    except ResourceExistsError:
+                        # Race condition: another chunk created it, retry the update
+                        if attempt < max_retries - 1:
+                            time.sleep(0.01 * (2 ** attempt))  # Exponential backoff
+                            continue
+                        else:
+                            raise  # Max retries exceeded
+                            
+                except HttpResponseError as e:
+                    # ETag mismatch or other conflict - another update happened
+                    if e.status_code == 412 and attempt < max_retries - 1:  # Precondition Failed
+                        time.sleep(0.01 * (2 ** attempt))  # Exponential backoff
+                        continue
+                    else:
+                        raise  # Different error or max retries exceeded
             
             if completed_count >= total_chunks:
                 log_msg = f'All {total_chunks} chunks completed for parent job {parent_job_id}. SignalR notification sent.'
+                
+                # Save persistent notification for offline users
+                notification_id = None
+                try:
+                    conn_str = os.environ.get('AzureWebJobsStorage')
+                    notification_storage = NotificationStorage(conn_str)
+                    notification_id = notification_storage.save_notification(
+                        user_id=user_id,
+                        job_id=parent_job_id,
+                        message=log_msg,
+                        status='completed'
+                    )
+                except Exception as notif_err:
+                    logging.error(f'Failed to save notification to storage: {str(notif_err)}')
+                
+                # Send real-time SignalR notification for online users (with same ID)
                 signalR.set(json.dumps({
                     'target': 'JobStatusUpdate',
-                    'arguments': [{"jobId": parent_job_id, "status": "completed", "message": log_msg}]
+                    'arguments': [{
+                        "id": notification_id,
+                        "jobId": parent_job_id,
+                        "status": "completed",
+                        "message": log_msg
+                    }]
                 }))
+                
                 logging.info(log_msg)
+                # Clean up the table entity after completion
+                table_client.delete_entity(partition_key=user_id, row_key=parent_job_id)
+
             else:
                 logging.info(f'Chunk {job_id} completed. Progress: {completed_count}/{total_chunks} for parent job {parent_job_id}.')
 

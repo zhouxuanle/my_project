@@ -11,7 +11,7 @@ export default function useDataTableActions() {
     setActiveTable,
     setSelectedFolder,
     setParentJobIdLocal,
-    resetFolderState,
+    // resetFolderState,
   } = useDataTableStore();
 
   const fetchTableData = useCallback(async ({ tableName, parentJobId }) => {
@@ -60,7 +60,7 @@ export default function useDataTableActions() {
 
   const backToTables = useCallback(() => {
     setMode('tables');
-    resetFolderState();
+    // resetFolderState();
   }, []);
 
   const backToFolders = useCallback(() => {

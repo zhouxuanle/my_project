@@ -1,8 +1,11 @@
 import React from 'react';
+import useNotificationActions from '../../hooks/Layout/useNotificationActions';
 
-function NotificationPanel({ isOpen, onClose, notifications, clearNotifications, removeNotification }) {
+function NotificationPanel({ isOpen, onClose, notifications }) {
   // Flatten notifications from all categories into a single array for display
   const allNotifications = Object.values(notifications).flat();
+  const { handleRemoveNotification } = useNotificationActions();
+  
   return (
     <>
       {/* Overlay */}
@@ -24,7 +27,7 @@ function NotificationPanel({ isOpen, onClose, notifications, clearNotifications,
               <div className="flex space-x-2">
                 {allNotifications.length > 0 && (
                   <button
-                    onClick={clearNotifications}
+                    onClick={() => handleRemoveNotification()}
                     className="text-xs text-gray-400 hover:text-white"
                   >
                     Clear All
@@ -46,7 +49,7 @@ function NotificationPanel({ isOpen, onClose, notifications, clearNotifications,
               {allNotifications.map((notif) => (
                 <div key={notif.id} className="p-3 bg-app-hover rounded-lg border border-app-hover relative">
                   <button
-                    onClick={() => removeNotification(notif.id)}
+                    onClick={() => handleRemoveNotification(notif)}
                     className="absolute top-2 right-2 text-gray-400 hover:text-white focus:outline-none"
                     aria-label="Close notification"
                   >

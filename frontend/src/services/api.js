@@ -110,6 +110,17 @@ export const api = {
     });
   },
 
+  // Notification APIs
+  getUnreadNotifications: async () => {
+    return fetchWithAuth(`${API_BASE_URL}/notifications/unread`, { method: 'GET' });
+  },
+
+  deleteNotification: async (notificationId) => {
+    return fetchWithAuth(`${API_BASE_URL}/notifications/${notificationId}`, { 
+      method: 'DELETE' 
+    });
+  },
+
   // Refresh access token using refresh token
   refresh: async () => {
     const refreshToken = localStorage.getItem('refresh_token');

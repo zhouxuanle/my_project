@@ -24,7 +24,7 @@ function Login({ onSuccess, switchToSignup }) {
           localStorage.setItem('refresh_token', data.refresh_token);
         }
         localStorage.setItem('userId', data.user_id);
-        onSuccess();
+        onSuccess(); // This will trigger fetchMissedNotifications
       } else {
         setError(data.msg || 'Login failed');
       }

@@ -1,0 +1,97 @@
+"""
+Notification storage operations using Azure Table Storage
+"""
+from azure.data.tables import TableServiceClient
+from azure.core.exceptions import ResourceExistsError
+from datetime import datetime
+import os
+
+
+class NotificationStorage:
+    def __init__(self, connection_string):
+        if not connection_string:
+            raise ValueError("Azure Storage connection string is required")
+        self.table_service_client = TableServiceClient.from_connection_string(connection_string)
+        self.table_name = 'Notifications'
+        self._ensure_table_exists()
+    
+    def _ensure_table_exists(self):
+        """Create notifications table if it doesn't exist"""
+        try:
+            self.table_service_client.create_table(self.table_name)
+        except ResourceExistsError:
+            pass
+    
+    def save_notification(self, user_id: str, job_id: str, message: str, status: str = 'completed'):
+        """
+        Save a notification to persistent storage
+        
+        Args:
+            user_id: User identifier
+            job_id: Job identifier
+            message: Notification message
+            status: Job status (completed, failed, etc.)
+            
+        Returns:
+            notification_id: The RowKey/ID of the created notification
+        """
+        table_client = self.table_service_client.get_table_client(self.table_name)
+        
+        notification_id = f"{job_id}_{int(datetime.utcnow().timestamp() * 1000)}"
+        entity = {
+            'PartitionKey': user_id,
+            'RowKey': notification_id,
+            'jobId': job_id,
+            'message': message,
+            'status': status,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+        table_client.create_entity(entity)
+        return notification_id
+    
+    def get_unread_notifications(self, user_id: str):
+        """
+        Get all unread notifications for a user
+        
+        Args:
+            user_id: User identifier
+            
+        Returns:
+            List of unread notification entities
+        """
+        table_client = self.table_service_client.get_table_client(self.table_name)
+        
+        query_filter = f"PartitionKey eq '{user_id}'"
+        entities = list(table_client.query_entities(query_filter))
+        
+        notifications = []
+        for entity in entities:
+            notifications.append({
+                'id': entity['RowKey'],
+                'jobId': entity.get('jobId'),
+                'message': entity.get('message'),
+                'status': entity.get('status'),
+                'timestamp': entity.get('timestamp')
+            })
+        
+        # Sort by timestamp descending (newest first)
+        notifications.sort(key=lambda x: x['timestamp'], reverse=True)
+        return notifications
+    
+    def delete_notification(self, user_id: str, notification_id: str):
+        """
+        Delete a notification
+        
+        Args:
+            user_id: User identifier
+            notification_id: Notification row key
+        """
+        table_client = self.table_service_client.get_table_client(self.table_name)
+        
+        try:
+            table_client.delete_entity(partition_key=user_id, row_key=notification_id)
+            return True
+        except Exception as e:
+            print(f"Error deleting notification: {e}")
+            return False

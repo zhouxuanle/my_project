@@ -39,8 +39,10 @@ export function useSignalR(addNotification) {
         const handler = (data) => {
           const jobData = Array.isArray(data) ? data[0] : data;
           addNotification('job', {
-            id: `${jobData.jobId}-${Date.now()}`,
-            message: jobData.message || 'Job completed',
+            id: jobData.id,
+            jobId: jobData.jobId,
+            message: jobData.message,
+            status: jobData.status,
             timestamp: new Date().toISOString(),
           });
         };

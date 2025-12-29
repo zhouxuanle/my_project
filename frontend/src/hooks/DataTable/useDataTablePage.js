@@ -33,7 +33,7 @@ export default function useDataTablePage({
   useEffect(() => {
     if (locationState?.openFolders) {
       setMode('folders');
-      resetFolderState();
+      // resetFolderState();
     }
   }, [
     locationState?.openFolders,

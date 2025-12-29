@@ -14,12 +14,12 @@ export function useAuth(refreshFolders) {
     setAuthMessage,
   } = useAuthStore();
 
-  // Check login status on mount
+  // Refresh folders on login
   useEffect(() => {
     if (isLoggedIn && refreshFolders) {
       refreshFolders();
     }
-  }, [isLoggedIn,refreshFolders]);
+  }, [isLoggedIn, refreshFolders]);
 
   return {
     isLoggedIn,

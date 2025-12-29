@@ -27,8 +27,6 @@ function Layout({ children }) {
         isOpen={isPanelOpen} 
         onClose={() => setIsPanelOpen(false)} 
         notifications={notifications}
-        clearNotifications={clearAllNotifications}
-        removeNotification={removeNotification}
       />
     </div>
   );
