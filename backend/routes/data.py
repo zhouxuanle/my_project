@@ -1,12 +1,21 @@
 from flask import Blueprint, request, jsonify
 import time
 import logging
+import uuid
 from database import get_db_connection
 from generate_event_tracking_data import DataGenerator
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from data_routing import DataRouter
+from azure.storage.queue import QueueClient
+from azure.storage.blob import BlobServiceClient
+from utils import NoProxy
+from config import Config
+import os
 
 data_bp = Blueprint('data', __name__)
 gd = DataGenerator()
+# Pass connection string explicitly to ensure QueueClient works outside Azure Functions host
+router = DataRouter(Config.AZURE_STORAGE_CONNECTION_STRING)
 
 @data_bp.route('/write_to_db', methods=['POST'])
 @jwt_required()
@@ -14,8 +23,8 @@ def write_to_db():
     connection = None
     try:
         connection = get_db_connection()
-        data = request.get_json(silent=True) or {}
-        data_count = int(data.get('dataCount', 1))
+        data = request.get_json()
+        data_count = int(data['dataCount'])
         messages = []
         user_ids = []
         with connection.cursor() as cursor:
@@ -106,6 +115,122 @@ def write_to_db():
     finally:
         if connection:
             connection.close()
+
+
+@data_bp.route('/clean_data', methods=['POST'])
+@jwt_required()
+def clean_data():
+    """
+    V1.0 Route: Submit data for cleaning and loading via Azure Data Factory
+    
+    Implements dual-path ETL:
+    - Small Batch (<=10k records): Fast Path via Pandas + Azure Function (10-min ADF trigger)
+    - Large Batch (>10k records): Heavy Path via PySpark + Databricks (daily ADF trigger)
+    
+    Request JSON:
+    {
+        "dataCount": 5000,  # Number of records to generate and clean
+        "jobName": "Q4_2024_Sales" # Optional job name
+    }
+    
+    Response:
+    {
+        "success": true,
+        "jobId": "uuid",
+        "parentJobId": "uuid",
+        "processingPath": "small_batch" | "large_batch",
+        "queueName": "small-batch-queue" | "large-batch-queue",
+        "expectedProcessingTime": "<5 minutes (10-min ADF trigger)" | "<24 hours (daily ADF trigger)",
+        "message": "Data routing decision and queue message details"
+    }
+    """
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        data_count = int(data['dataCount'])
+        parent_job_id = data.get('parentJobId')
+        # Fetch jobIds from blob storage
+        with NoProxy():
+            container_client = BlobServiceClient.from_connection_string(
+                Config.AZURE_STORAGE_CONNECTION_STRING
+            ).get_container_client('shanlee-raw-data')
+            
+            blobs = list(container_client.list_blobs(name_starts_with=f"{user_id}/{parent_job_id}/"))
+            job_ids = [blob.name.split('/')[-1].replace('.json', '') for blob in blobs]
+        
+        # Queue one message per chunk for parallel processing
+        queue_name = None
+        for chunk_idx, job_id in enumerate(job_ids):
+            queue_name, _ = router.queue_message_to_path(
+                user_id=user_id,
+                count=data_count,
+                job_id=job_id,
+                parent_job_id=parent_job_id,
+                total_chunks=len(job_ids),
+                chunk_index=chunk_idx
+            )
+        
+        # All chunks routed to same queue (based on count), so get decision once
+        processing_path = 'small_batch' if data_count <= 10000 else 'large_batch'
+        expected_time = '<5 minutes (10-min ADF trigger)' if data_count <= 10000 else '<24 hours (daily ADF trigger)'
+        
+        logging.info(f"Cleaning queued: {len(job_ids)} chunks to {queue_name}, path={processing_path}")
+        
+        return jsonify({
+            'success': True,
+            'parentJobId': parent_job_id,
+            'jobIds': job_ids,
+            'totalChunks': len(job_ids),
+            'processingPath': processing_path,
+            'queueName': queue_name,
+            'expectedProcessingTime': expected_time,
+            'recordCount': data_count,
+            'message': f'{len(job_ids)} chunks queued to {queue_name}'
+        })
+    
+    except Exception as e:
+        logging.error(f"Error in clean_data endpoint: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error processing request: {str(e)}'
+        }), 500
+
+
+@data_bp.route('/routing_config/<path_type>', methods=['GET'])
+@jwt_required()
+def get_routing_config(path_type):
+    """
+    Get configuration details for a specific processing path.
+    
+    Args:
+        path_type: 'small_batch' or 'large_batch'
+    
+    Returns:
+        Configuration dictionary for the specified path
+    """
+    try:
+        if path_type == 'small_batch':
+            config = router.get_queue_config('small_batch')
+        elif path_type == 'large_batch':
+            config = router.get_queue_config('large_batch')
+        else:
+            return jsonify({
+                'success': False,
+                'message': f'Invalid path_type: {path_type}. Use "small_batch" or "large_batch"'
+            }), 400
+        
+        return jsonify({
+            'success': True,
+            'pathType': path_type,
+            'config': config
+        })
+    
+    except Exception as e:
+        logging.error(f"Error retrieving routing config: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error retrieving configuration: {str(e)}'
+        }), 500
 
 @data_bp.route('/get_<table_name>', methods=['GET'])
 def get_table_data(table_name):

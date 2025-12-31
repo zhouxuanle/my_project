@@ -3,26 +3,40 @@ Project Overview: I am building a "Universal AI Data Orchestrator." Current Tech
 
 # 🚀 Project Roadmap: Universal AI Data Orchestrator
 
-## 📋 V1.0: Professional Data Pipeline (The Baseline)
-- [ ] Implement Medallion Architecture in Azure (Folders: `bronze/`, `silver/`, `gold/`)
-- [ ] Connect Flask to Azure Data Factory (ADF) API to trigger pipelines
-- [ ] Create "Small Path" Azure Function (Pandas) for quick cleaning
-- [ ] Create "Large Path" Databricks Job (PySpark) for big data batches
-- [ ] Automated Gold Layer loading into Azure MySQL/Synapse
+## 📋 V1.0: Orchestrated Data Cleaning & Loading (Stage 2)
+**Goal:** Implement a production-ready, dual-path ETL pipeline based on data volume.
+- [ ] **Data Routing Logic:**
+    - [ ] Update Azure Function to check data size upon "Clean Data" request.
+    - [ ] Logic: Send to `small-queue` if <= 10k records; else send to `large-queue`.
+- [ ] **Small Batch Pipeline (Fast Path):**
+    - [ ] Set up ADF Pipeline with a 10-minute trigger to monitor `small-queue`.
+    - [ ] Develop Azure Function using **Pandas** for transformation logic.
+- [ ] **Large Batch Pipeline (Heavy Path):**
+    - [ ] Set up ADF Pipeline with a Daily trigger to monitor `large-queue`.
+    - [ ] Develop **Azure Databricks (PySpark)** notebook for heavy data cleaning.
+- [ ] **Multi-Destination Loading:**
+    - [ ] Configure ADF to load cleaned data into **Azure Synapse** (Data Warehouse).
+    - [ ] Configure ADF to load cleaned data into **Azure MySQL** (Operational DB).
+- [ ] **Status & Notification:**
+    - [ ] Integrate **SignalR** with ADF to push "Cleaning Complete" notifications to the UI.
 
-## ☁️ V2.0: Multi-Cloud & Hybrid Bridge
-- [ ] Refactor Backend to use a generic `StorageService` Interface
-- [ ] Implement `AliCloudOSSAdapter` (Adapter Pattern)
-- [ ] Add Frontend Toggle: [Target Cloud: Azure | AliCloud]
-- [ ] Implement Cross-Cloud Data Synchronization logic
+
+## ☁️ V2.0: Multi-Cloud & Hybrid Bridge (AliCloud)
+**Goal:** Break the Azure-only lock-in and enable cross-cloud portability.
+- [ ] **Adapter Pattern Refactor:** Create a generic `StorageService` interface in the Flask backend.
+- [ ] **AliCloud Integration:** Implement `AliCloudOSSAdapter` for storage and `FunctionCompute` for cleaning.
+- [ ] **Cloud Selection UI:** Add a frontend toggle allowing users to choose the target cloud provider.
+- [ ] **Cross-Cloud Sync:** Build logic to move/sync datasets between Azure and Alibaba Cloud.
 
 ## 🧠 V3.0: GenAI & Intelligent Orchestration
-- [ ] **AI Generator:** Use LLM to turn user prompts into Faker JSON schemas
-- [ ] **Agentic Auditor:** Implement LangGraph to analyze data quality
-- [ ] **Vector RAG:** Store generated schemas in ChromaDB for semantic search
-- [ ] **Dynamic Infrastructure:** AI-generated scripts for AWS/GCP migration
+**Goal:** Use LLMs to automate schema generation and infrastructure code.
+- [ ] **Dynamic AI Generator:** Use LangChain to turn natural language prompts into custom Faker schemas.
+- [ ] **Agentic Data Auditor:** Build a **LangGraph** agent to inspect data quality and explain fixes.
+- [ ] **Semantic Search (RAG):** Store generated schemas/metadata in ChromaDB for semantic discovery.
+- [ ] **Infrastructure Translator:** Use AI to automatically rewrite ETL scripts for AWS or GCP on demand.
 
 ## 🏛️ V4.0: Enterprise Platform & FinOps
-- [ ] **Standardization:** Integrate DBT (Data Build Tool) for cleaning templates
-- [ ] **FinOps:** React dashboard for real-time cloud cost estimation
-- [ ] **Security:** Centralize all cloud keys in Azure Key Vault
+**Goal:** Focus on cost management, standardization, and professional scaling.
+- [ ] **Standardization:** Integrate **DBT (Data Build Tool)** for cloud-agnostic transformation templates.
+- [ ] **FinOps Dashboard:** React analytics page showing real-time cloud cost estimates for Azure vs. AliCloud.
+- [ ] **Enterprise Security:** Centralize all secrets and keys in **Azure Key Vault**.

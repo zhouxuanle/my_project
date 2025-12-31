@@ -110,6 +110,13 @@ export const api = {
     });
   },
 
+  cleanData: async (dataCount, parentJobId) => {
+    return fetchWithAuth(`${API_BASE_URL}/clean_data`, {
+      method: 'POST',
+      body: JSON.stringify({ dataCount, parentJobId }),
+    });
+  },
+
   // Notification APIs
   getUnreadNotifications: async () => {
     return fetchWithAuth(`${API_BASE_URL}/notifications/unread`, { method: 'GET' });

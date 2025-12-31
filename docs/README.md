@@ -83,9 +83,6 @@ New to the project? Start here:
 - Code style guidelines
   - Python (PEP 8)
   - JavaScript (Airbnb style)
-- Testing strategies
-  - Backend testing with pytest
-  - Frontend testing with React Testing Library
 - Debugging techniques
 - Common development tasks
   - Adding API endpoints
@@ -112,6 +109,13 @@ New to the project? Start here:
 **Best for:** Working on the React frontend, understanding frontend architecture
 
 ---
+
+### 📂 V1.0 Medallion Docs
+Use these together for the V1.0 dual-path pipeline (small: 10-min, large: 10-hour queue-aware).
+- [V1.0_SUMMARY.md](./V1.0_SUMMARY.md) – one-page overview and status
+- [V1.0_IMPLEMENTATION.md](./V1.0_IMPLEMENTATION.md) – detailed pipelines (Azure Functions + Databricks)
+- [V1.0_API.md](./V1.0_API.md) – endpoint reference and flow diagrams
+- [V1.0_QUICK_START.md](./V1.0_QUICK_START.md) – hands-on steps and commands
 
 ## Documentation by Role
 
@@ -169,12 +173,6 @@ npm run dev
 
 ### Common Commands
 ```bash
-# Backend tests
-cd backend && pytest
-
-# Frontend tests
-cd frontend && npm test
-
 # Build frontend
 cd frontend && npm run build
 

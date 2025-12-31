@@ -1,0 +1,285 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "ARM Template for V1.0 Azure Data Factory Pipeline - Small Batch Path"
+  },
+  "parameters": {
+    "dataFactoryName": {
+      "type": "string",
+      "defaultValue": "adf-universal-orchestrator",
+      "metadata": {
+        "description": "Name of the Azure Data Factory"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the storage account"
+      }
+    },
+    "adlsAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the ADLS Gen2 account"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location for all resources"
+      }
+    }
+  },
+  "variables": {
+    "dataFactoryVersion": "2018-06-01",
+    "smallBatchQueueName": "small-batch-queue",
+    "bronzeContainerName": "bronze",
+    "silverContainerName": "silver",
+    "goldContainerName": "gold"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.DataFactory/factories/linkedservices",
+      "apiVersion": "[variables('dataFactoryVersion')]",
+      "name": "[concat(parameters('dataFactoryName'), '/AzureBlobStorageLinkedService')]",
+      "properties": {
+        "type": "AzureBlobStorage",
+        "typeProperties": {
+          "connectionString": "[concat('DefaultEndpointProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-06-01').keys[0].value, ';EndpointSuffix=core.windows.net')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DataFactory/factories/linkedservices",
+      "apiVersion": "[variables('dataFactoryVersion')]",
+      "name": "[concat(parameters('dataFactoryName'), '/AzureDataLakeStorageLinkedService')]",
+      "properties": {
+        "type": "AzureBlobFS",
+        "typeProperties": {
+          "url": "[concat('https://', parameters('adlsAccountName'), '.dfs.core.windows.net')]",
+          "accountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('adlsAccountName')), '2019-06-01').keys[0].value]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DataFactory/factories/datasets",
+      "apiVersion": "[variables('dataFactoryVersion')]",
+      "name": "[concat(parameters('dataFactoryName'), '/RawDataBlobDataset')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DataFactory/factories/linkedservices', parameters('dataFactoryName'), 'AzureBlobStorageLinkedService')]"
+      ],
+      "properties": {
+        "linkedServiceName": {
+          "referenceName": "AzureBlobStorageLinkedService",
+          "type": "LinkedServiceReference"
+        },
+        "type": "Json",
+        "typeProperties": {
+          "location": {
+            "type": "AzureBlobStorageLocation",
+            "container": "shanlee-raw-data",
+            "fileName": "@dataset().FileName"
+          }
+        },
+        "parameters": {
+          "FileName": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DataFactory/factories/datasets",
+      "apiVersion": "[variables('dataFactoryVersion')]",
+      "name": "[concat(parameters('dataFactoryName'), '/SilverParquetDataset')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DataFactory/factories/linkedservices', parameters('dataFactoryName'), 'AzureDataLakeStorageLinkedService')]"
+      ],
+      "properties": {
+        "linkedServiceName": {
+          "referenceName": "AzureDataLakeStorageLinkedService",
+          "type": "LinkedServiceReference"
+        },
+        "type": "Parquet",
+        "typeProperties": {
+          "location": {
+            "type": "AzureBlobFSLocation",
+            "fileSystem": "datalake",
+            "directoryPath": "silver/cleaned/@{pipeline().parameters.RunDate}"
+          },
+          "compressionCodec": "snappy"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DataFactory/factories/datasets",
+      "apiVersion": "[variables('dataFactoryVersion')]",
+      "name": "[concat(parameters('dataFactoryName'), '/GoldParquetDataset')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DataFactory/factories/linkedservices', parameters('dataFactoryName'), 'AzureDataLakeStorageLinkedService')]"
+      ],
+      "properties": {
+        "linkedServiceName": {
+          "referenceName": "AzureDataLakeStorageLinkedService",
+          "type": "LinkedServiceReference"
+        },
+        "type": "Parquet",
+        "typeProperties": {
+          "location": {
+            "type": "AzureBlobFSLocation",
+            "fileSystem": "datalake",
+            "directoryPath": "gold/analytics/@{pipeline().parameters.RunDate}"
+          },
+          "compressionCodec": "snappy"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DataFactory/factories/pipelines",
+      "apiVersion": "[variables('dataFactoryVersion')]",
+      "name": "[concat(parameters('dataFactoryName'), '/SmallBatchCleaningPipeline')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DataFactory/factories/datasets', parameters('dataFactoryName'), 'RawDataBlobDataset')]",
+        "[resourceId('Microsoft.DataFactory/factories/datasets', parameters('dataFactoryName'), 'SilverParquetDataset')]",
+        "[resourceId('Microsoft.DataFactory/factories/datasets', parameters('dataFactoryName'), 'GoldParquetDataset')]"
+      ],
+      "properties": {
+        "description": "V1.0 Small Batch Medallion Architecture Pipeline (<=10k records)",
+        "activities": [
+          {
+            "name": "CheckQueueActivity",
+            "type": "WebActivity",
+            "typeProperties": {
+              "url": "[concat('https://queue.core.windows.net/', parameters('storageAccountName'), '/', variables('smallBatchQueueName'), '/messages')]",
+              "method": "GET",
+              "authentication": {
+                "type": "MSI",
+                "resource": "https://storage.azure.com/"
+              }
+            }
+          },
+          {
+            "name": "TransformToSilverActivity",
+            "type": "AzureFunctionActivity",
+            "dependsOn": [
+              {
+                "activity": "CheckQueueActivity",
+                "dependencyConditions": [
+                  "Succeeded"
+                ]
+              }
+            ],
+            "typeProperties": {
+              "functionName": "transform_small_batch_queue",
+              "method": "POST",
+              "body": "@activity('CheckQueueActivity').output"
+            },
+            "linkedServiceName": {
+              "referenceName": "AzureFunctionsLinkedService",
+              "type": "LinkedServiceReference"
+            }
+          },
+          {
+            "name": "TransformToGoldActivity",
+            "type": "ExecuteDataFlow",
+            "dependsOn": [
+              {
+                "activity": "TransformToSilverActivity",
+                "dependencyConditions": [
+                  "Succeeded"
+                ]
+              }
+            ],
+            "typeProperties": {
+              "dataflow": {
+                "referenceName": "SilverToGoldDataFlow",
+                "type": "DataFlowReference"
+              },
+              "compute": {
+                "coreCount": 8,
+                "computeType": "General"
+              },
+              "staging": {
+                "linkedService": {
+                  "referenceName": "AzureDataLakeStorageLinkedService",
+                  "type": "LinkedServiceReference"
+                },
+                "path": "staging"
+              }
+            }
+          },
+          {
+            "name": "NotificationActivity",
+            "type": "WebActivity",
+            "dependsOn": [
+              {
+                "activity": "TransformToGoldActivity",
+                "dependencyConditions": [
+                  "Succeeded"
+                ]
+              }
+            ],
+            "typeProperties": {
+              "url": "@pipeline().parameters.NotificationUrl",
+              "method": "POST",
+              "body": {
+                "value": "@json(concat('{\"status\":\"completed\",\"pipeline\":\"SmallBatchCleaningPipeline\",\"runId\":\"', pipeline().RunId, '\"}'))",
+                "type": "Expression"
+              }
+            }
+          }
+        ],
+        "parameters": {
+          "RunDate": {
+            "type": "string",
+            "defaultValue": "@{formatDateTime(utcnow(), 'yyyy-MM-dd')}"
+          },
+          "NotificationUrl": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DataFactory/factories/triggers",
+      "apiVersion": "[variables('dataFactoryVersion')]",
+      "name": "[concat(parameters('dataFactoryName'), '/SmallBatchScheduleTrigger')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DataFactory/factories/pipelines', parameters('dataFactoryName'), 'SmallBatchCleaningPipeline')]"
+      ],
+      "properties": {
+        "description": "Trigger small batch pipeline every 10 minutes",
+        "runtimeState": "Started",
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+          "recurrence": {
+            "frequency": "Minute",
+            "interval": 10,
+            "startTime": "[utcNow('u')]",
+            "timeZone": "UTC"
+          }
+        },
+        "pipelines": [
+          {
+            "pipelineReference": {
+              "referenceName": "SmallBatchCleaningPipeline",
+              "type": "PipelineReference"
+            },
+            "parameters": {
+              "RunDate": "@{formatDateTime(trigger().scheduledTime, 'yyyy-MM-dd')}",
+              "NotificationUrl": "https://your-backend.azurewebsites.net/notify"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "dataFactoryId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.DataFactory/factories', parameters('dataFactoryName'))]"
+    }
+  }
+}

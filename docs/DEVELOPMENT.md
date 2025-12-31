@@ -9,7 +9,6 @@ Guide for developers working on the E-commerce Data Generation Platform.
 - [Project Structure](#project-structure)
 - [Development Workflow](#development-workflow)
 - [Code Style Guidelines](#code-style-guidelines)
-- [Testing](#testing)
 - [Debugging](#debugging)
 - [Common Tasks](#common-tasks)
 - [Best Practices](#best-practices)
@@ -187,16 +186,7 @@ git checkout -b feature/your-feature-name
 
 2. **Make your changes**
 
-3. **Test locally:**
-```bash
-# Backend tests
-cd backend
-pytest
-
-# Frontend tests
-cd frontend
-npm test
-```
+3. **Validate changes:** Automated tests are deferred per request; perform targeted manual checks on critical flows as needed.
 
 4. **Commit changes:**
 ```bash
@@ -339,104 +329,9 @@ DataTable.defaultProps = {
 };
 ```
 
-## Testing
+## Validation
 
-### Backend Testing
-
-Using pytest:
-
-```python
-# tests/test_auth.py
-import pytest
-from app import app
-
-@pytest.fixture
-def client():
-    app.config['TESTING'] = True
-    with app.test_client() as client:
-        yield client
-
-def test_register_user(client):
-    """Test user registration."""
-    response = client.post('/register', json={
-        'username': 'testuser',
-        'password': 'TestPass123'
-    })
-    assert response.status_code == 201
-    assert b'User created successfully' in response.data
-
-def test_login(client):
-    """Test user login."""
-    # First register
-    client.post('/register', json={
-        'username': 'testuser',
-        'password': 'TestPass123'
-    })
-    
-    # Then login
-    response = client.post('/login', json={
-        'username': 'testuser',
-        'password': 'TestPass123'
-    })
-    assert response.status_code == 200
-    data = response.get_json()
-    assert 'access_token' in data
-```
-
-Run tests:
-```bash
-cd backend
-pytest
-pytest -v  # verbose
-pytest tests/test_auth.py  # specific file
-```
-
-### Frontend Testing
-
-Using React Testing Library:
-
-```javascript
-// src/components/__tests__/DataTable.test.js
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import DataTable from '../DataTable';
-
-describe('DataTable', () => {
-  test('renders data table', () => {
-    render(<DataTable userId="123" />);
-    expect(screen.getByText(/data table/i)).toBeInTheDocument();
-  });
-
-  test('fetches and displays data', async () => {
-    render(<DataTable userId="123" />);
-    
-    await waitFor(() => {
-      expect(screen.getByText(/loading/i)).toBeInTheDocument();
-    });
-    
-    await waitFor(() => {
-      expect(screen.getByText(/john doe/i)).toBeInTheDocument();
-    });
-  });
-
-  test('handles refresh button click', async () => {
-    const user = userEvent.setup();
-    render(<DataTable userId="123" />);
-    
-    const refreshButton = screen.getByRole('button', { name: /refresh/i });
-    await user.click(refreshButton);
-    
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
-  });
-});
-```
-
-Run tests:
-```bash
-cd frontend
-npm test
-npm test -- --coverage  # with coverage
-```
+Automated tests are deferred per request; rely on targeted manual checks when modifying critical flows.
 
 ## Debugging
 

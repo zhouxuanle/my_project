@@ -7,6 +7,7 @@ Functions are organized in separate modules under the 'functions' directory.
 Structure:
 - functions/signalr_functions.py: SignalR related functions (negotiate, etc.)
 - functions/queue_functions.py: Queue-triggered functions (data generation, etc.)
+- functions/small_batch_functions.py: Small batch transformation (Pandas-based)
 - Add more function modules as needed...
 
 To add new functions:
@@ -19,6 +20,7 @@ import logging
 
 # Import function registration modules
 from functions import register_signalr_functions, register_queue_functions
+from functions.small_batch_functions import register_small_batch_functions
 
 # Initialize the Azure Functions app
 app = func.FunctionApp()
@@ -26,5 +28,6 @@ app = func.FunctionApp()
 # Register all function modules
 register_signalr_functions(app)
 register_queue_functions(app)
+register_small_batch_functions(app)
 
 logging.info("All Azure Functions registered successfully")
