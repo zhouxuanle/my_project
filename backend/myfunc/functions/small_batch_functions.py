@@ -24,7 +24,6 @@ import traceback
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from azure.storage.blob import BlobServiceClient, ContainerClient
-from azure.storage.filedatalake import DataLakeServiceClient
 from transformations.pandas import PandasTransformer, json_to_dataframe
 
 logger = logging.getLogger(__name__)
@@ -97,8 +96,7 @@ def register_small_batch_functions(app: func.FunctionApp):
             
             # Transform Bronze → Silver layer (Cleaning & Standardization)
             try:
-                silver_df, silver_metadata = transformer.transform_to_silver(raw_data)
-                logger.info(f"Silver transformation complete: {silver_metadata}")
+                silver_df = transformer.transform_to_silver(raw_data)
                 logger.info(f"Silver layer output ready: {len(silver_df)} cleaned records")
                 
             except Exception as e:
@@ -110,20 +108,22 @@ def register_small_batch_functions(app: func.FunctionApp):
                 # Get date from timestamp
                 run_date = datetime.fromisoformat(processing_timestamp).strftime('%Y-%m-%d')
                 
-                # Initialize ADLS client
+                # Convert DataFrame to Parquet bytes
+                parquet_bytes = silver_df.to_parquet(index=False, compression='snappy')
+                
+                # Use BlobServiceClient for ADLS Gen2 (hierarchical namespace enabled)
                 adls_conn_str = os.environ.get('AzureWebJobsStorage')
-                adls_service_client = DataLakeServiceClient.from_connection_string(adls_conn_str)
-                file_system = adls_service_client.get_file_system_client('datalake')
+                adls_service_client = BlobServiceClient.from_connection_string(adls_conn_str)
                 
                 # Create Silver layer file path (cleaned, standardized data)
                 silver_file_path = f'silver/cleaned/{user_id}/{parent_job_id}/{job_id}.parquet'
                 
-                # Convert DataFrame to Parquet bytes
-                parquet_bytes = silver_df.to_parquet(index=False, compression='snappy')
-                
-                # Upload to ADLS Silver layer
-                file_client = file_system.get_file_client(silver_file_path)
-                file_client.upload_data(parquet_bytes, overwrite=True)
+                # Upload to ADLS Gen2 container (filesystem)
+                silver_blob_client = adls_service_client.get_blob_client(
+                    container='datalake',  # ADLS Gen2 filesystem name
+                    blob=silver_file_path
+                )
+                silver_blob_client.upload_blob(parquet_bytes, overwrite=True)
                 
                 logger.info(f"Saved {len(silver_df)} Silver layer records to {silver_file_path}")
                 
@@ -139,10 +139,9 @@ def register_small_batch_functions(app: func.FunctionApp):
                     'processingPath': 'small_batch',
                     'rawRecords': len(raw_data),
                     'silverRecords': len(silver_df),
-                    'duplicatesRemoved': silver_metadata['duplicates_removed'],
-                    'avgQualityScore': float(silver_metadata['quality_score_avg']),
-                    'processingDurationSeconds': silver_metadata['processing_duration_seconds'],
-                    'transformationTimestamp': silver_metadata['transformation_timestamp'],
+                    'duplicatesRemoved': 0,  # Simplified - can be calculated if needed
+                    'processingDurationSeconds': 0,  # Simplified
+                    'transformationTimestamp': processing_timestamp,
                     'functionExecutionTime': datetime.utcnow().isoformat()
                 }
                 
