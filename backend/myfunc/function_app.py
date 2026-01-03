@@ -19,9 +19,7 @@ import azure.functions as func
 import logging
 
 # Import function registration modules
-from functions import register_signalr_functions, register_queue_functions
-from functions.small_batch_functions import register_small_batch_functions
-
+from functions import register_signalr_functions, register_queue_functions, register_small_batch_functions
 # Initialize the Azure Functions app
 app = func.FunctionApp()
 

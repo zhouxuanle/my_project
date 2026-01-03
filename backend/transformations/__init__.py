@@ -5,9 +5,8 @@ Provides transformation utilities for both Pandas (small batch)
 and PySpark (large batch) processing paths.
 """
 
-from .pandas import PandasTransformer, json_to_dataframe
+from .pandas import PandasTransformer
 
 __all__ = [
-    'PandasTransformer',
-    'json_to_dataframe',
+    'PandasTransformer'
 ]

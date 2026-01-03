@@ -14,7 +14,7 @@ import json
 import logging
 import os
 import importlib
-from typing import Dict, List
+from typing import Dict
 from datetime import datetime
 from transformations.pandas.tables.user import transform_user_data
 
@@ -68,7 +68,7 @@ class PandasTransformer:
         self.transformation_log = []
         self.entity_transforms = _discover_entity_transforms()
     
-    def transform_to_silver(self, raw_data: List[Dict]) -> pd.DataFrame:
+    def transform_to_silver(self, raw_data: str) -> Dict[str, pd.DataFrame]:
         """
         Transform raw data to Silver layer (cleaned, standardized).
         
@@ -80,148 +80,122 @@ class PandasTransformer:
         Only processes entities that have dedicated transformation functions.
         
         Operations:
-        1. Auto-discover entity transformation functions from tables/*.py modules
-        2. Apply entity-specific transformation functions for discovered entities
-        3. Data type conversion and standardization
-        4. Remove duplicates by entity keys
-        5. Handle missing values and validation
+        1. Parse JSON string to Python data structures
+        2. Auto-discover entity transformation functions from tables/*.py modules
+        3. Apply entity-specific transformation functions for discovered entities
+        4. Data type conversion and standardization
+        5. Remove duplicates by entity keys
+        6. Handle missing values and validation
         
         Args:
-            raw_data: List of raw record dictionaries from Bronze layer
+            raw_data: Raw JSON string from Bronze layer
             
         Returns:
-            DataFrame with Silver layer structure
+            Dict of DataFrames with Silver layer structure, keyed by entity type
         """
         try:
+            # Parse JSON string to Python data structures
+            raw_data = json.loads(raw_data)
+            
             self.records_processed = len(raw_data)
             
             # Process all entities with available transformation functions
             entity_dataframes = {}
             
             for entity_type, transform_func in self.entity_transforms.items():
-                # Use centralized transformation function
-                raw_entity_df = pd.DataFrame({entity_type: [record.get(entity_type, {}) for record in raw_data]})
-                entity_df = transform_func(raw_entity_df)
+                # Extract entity data directly from records
+                entity_records = [record[entity_type] for record in raw_data]
+                entity_df = transform_func(entity_records)
                 entity_dataframes[entity_type] = entity_df
             
-            # Extract DataFrames for easier access
-            users_df = entity_dataframes['user']
-            
-            # Combine into single Silver layer DataFrame
-            silver_df = pd.DataFrame({
-                'record_type': ['user'] * len(users_df),
-                'user_id': users_df['id'],
-                'entity_id': users_df['id'],
-                'email': users_df['email'],
-                'phone': users_df['phone_number'],
-                'age': users_df['age'],
-                'processing_timestamp': datetime.utcnow().isoformat()
-            })
-            
-            return silver_df
+            # Return separate DataFrames for each entity type
+            return entity_dataframes
             
         except Exception as e:
             logger.error(f"Error transforming to Silver layer: {str(e)}")
             raise
     
-    def transform_to_gold(self, silver_df: pd.DataFrame) -> Tuple[Dict[str, pd.DataFrame], Dict]:
-        """
-        Transform Silver layer data to Gold layer (aggregated, business-ready).
+#     def transform_to_gold(self, silver_df: pd.DataFrame) -> Tuple[Dict[str, pd.DataFrame], Dict]:
+#         """
+#         Transform Silver layer data to Gold layer (aggregated, business-ready).
         
-        Creates dimensional tables:
-        1. dim_users: User demographic dimensions
-        2. dim_time: Time dimension
-        3. fact_orders: Order facts
-        4. agg_user_metrics: User analytics aggregations
+#         Creates dimensional tables:
+#         1. dim_users: User demographic dimensions
+#         2. dim_time: Time dimension
+#         3. fact_orders: Order facts
+#         4. agg_user_metrics: User analytics aggregations
         
-        Args:
-            silver_df: Silver layer DataFrame
+#         Args:
+#             silver_df: Silver layer DataFrame
             
-        Returns:
-            Tuple of (dict of DataFrames, metadata)
-        """
-        try:
-            start_time = datetime.now()
-            gold_tables = {}
+#         Returns:
+#             Tuple of (dict of DataFrames, metadata)
+#         """
+#         try:
+#             start_time = datetime.now()
+#             gold_tables = {}
             
-            # Create dim_users
-            dim_users = silver_df[silver_df['record_type'] == 'user'][
-                ['user_id', 'email', 'age']
-            ].drop_duplicates()
-            dim_users['age_group'] = pd.cut(
-                dim_users['age'],
-                bins=[0, 18, 25, 35, 50, 65, 100],
-                labels=['<18', '18-24', '25-34', '35-49', '50-64', '65+']
-            )
-            gold_tables['dim_users'] = dim_users
+#             # Create dim_users
+#             dim_users = silver_df[silver_df['record_type'] == 'user'][
+#                 ['user_id', 'email', 'age']
+#             ].drop_duplicates()
+#             dim_users['age_group'] = pd.cut(
+#                 dim_users['age'],
+#                 bins=[0, 18, 25, 35, 50, 65, 100],
+#                 labels=['<18', '18-24', '25-34', '35-49', '50-64', '65+']
+#             )
+#             gold_tables['dim_users'] = dim_users
             
-            # Create dim_time
-            time_data = []
-            base_date = pd.Timestamp.now().date()
-            for i in range(365):
-                current_date = base_date - pd.Timedelta(days=i)
-                time_data.append({
-                    'date_id': int(current_date.strftime('%Y%m%d')),
-                    'date': current_date,
-                    'day_of_week': current_date.strftime('%A'),
-                    'month': current_date.month,
-                    'year': current_date.year,
-                    'quarter': (current_date.month - 1) // 3 + 1
-                })
-            dim_time = pd.DataFrame(time_data)
-            gold_tables['dim_time'] = dim_time
+#             # Create dim_time
+#             time_data = []
+#             base_date = pd.Timestamp.now().date()
+#             for i in range(365):
+#                 current_date = base_date - pd.Timedelta(days=i)
+#                 time_data.append({
+#                     'date_id': int(current_date.strftime('%Y%m%d')),
+#                     'date': current_date,
+#                     'day_of_week': current_date.strftime('%A'),
+#                     'month': current_date.month,
+#                     'year': current_date.year,
+#                     'quarter': (current_date.month - 1) // 3 + 1
+#                 })
+#             dim_time = pd.DataFrame(time_data)
+#             gold_tables['dim_time'] = dim_time
             
-            # Create fact tables
-            fact_orders = silver_df[silver_df['record_type'] == 'user'].agg({
-                'user_id': 'count',
-                'email': 'count'
-            }).reset_index()
-            fact_orders.columns = ['user_id', 'order_count']
-            gold_tables['fact_orders'] = fact_orders
+#             # Create fact tables
+#             fact_orders = silver_df[silver_df['record_type'] == 'user'].agg({
+#                 'user_id': 'count',
+#                 'email': 'count'
+#             }).reset_index()
+#             fact_orders.columns = ['user_id', 'order_count']
+#             gold_tables['fact_orders'] = fact_orders
             
-            # Create aggregations
-            agg_metrics = silver_df.groupby('user_id').agg({
-                'email': 'first',
-                'age': 'first'
-            }).reset_index()
-            agg_metrics.columns = ['user_id', 'email', 'age']
-            gold_tables['agg_user_metrics'] = agg_metrics
+#             # Create aggregations
+#             agg_metrics = silver_df.groupby('user_id').agg({
+#                 'email': 'first',
+#                 'age': 'first'
+#             }).reset_index()
+#             agg_metrics.columns = ['user_id', 'email', 'age']
+#             gold_tables['agg_user_metrics'] = agg_metrics
             
-            end_time = datetime.now()
-            duration = (end_time - start_time).total_seconds()
+#             end_time = datetime.now()
+#             duration = (end_time - start_time).total_seconds()
             
-            metadata = {
-                'layer': 'gold',
-                'tables_created': list(gold_tables.keys()),
-                'total_rows_gold': sum(len(df) for df in gold_tables.values()),
-                'processing_duration_seconds': duration,
-                'transformation_timestamp': start_time.isoformat()
-            }
+#             metadata = {
+#                 'layer': 'gold',
+#                 'tables_created': list(gold_tables.keys()),
+#                 'total_rows_gold': sum(len(df) for df in gold_tables.values()),
+#                 'processing_duration_seconds': duration,
+#                 'transformation_timestamp': start_time.isoformat()
+#             }
             
-            logger.info(f"Gold transformation complete: {metadata}")
-            return gold_tables, metadata
+#             logger.info(f"Gold transformation complete: {metadata}")
+#             return gold_tables, metadata
             
-        except Exception as e:
-            logger.error(f"Error transforming to Gold layer: {str(e)}")
-            raise
+#         except Exception as e:
+#             logger.error(f"Error transforming to Gold layer: {str(e)}")
+#             raise
     
-
-def json_to_dataframe(json_data: str) -> List[Dict]:
-    """
-    Parse JSON data from blob storage into list of records.
-    
-    Args:
-        json_data: JSON string from blob
-        
-    Returns:
-        List of record dictionaries
-    """
-    try:
-        return json.loads(json_data)
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse JSON: {str(e)}")
-        raise
-
 
 def dataframe_to_parquet(df: pd.DataFrame, path: str) -> None:
     """

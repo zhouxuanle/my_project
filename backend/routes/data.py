@@ -1,16 +1,13 @@
 from flask import Blueprint, request, jsonify
 import time
 import logging
-import uuid
 from database import get_db_connection
 from generate_event_tracking_data import DataGenerator
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from data_routing import DataRouter
-from azure.storage.queue import QueueClient
 from azure.storage.blob import BlobServiceClient
 from utils import NoProxy
 from config import Config
-import os
 
 data_bp = Blueprint('data', __name__)
 gd = DataGenerator()
@@ -160,14 +157,12 @@ def clean_data():
         
         # Queue one message per chunk for parallel processing
         queue_name = None
-        for chunk_idx, job_id in enumerate(job_ids):
-            queue_name, _ = router.queue_message_to_path(
+        for job_id in job_ids:
+            queue_name = router.queue_message_to_path(
                 user_id=user_id,
                 count=data_count,
                 job_id=job_id,
-                parent_job_id=parent_job_id,
-                total_chunks=len(job_ids),
-                chunk_index=chunk_idx
+                parent_job_id=parent_job_id
             )
         
         # All chunks routed to same queue (based on count), so get decision once
@@ -195,42 +190,6 @@ def clean_data():
             'message': f'Error processing request: {str(e)}'
         }), 500
 
-
-@data_bp.route('/routing_config/<path_type>', methods=['GET'])
-@jwt_required()
-def get_routing_config(path_type):
-    """
-    Get configuration details for a specific processing path.
-    
-    Args:
-        path_type: 'small_batch' or 'large_batch'
-    
-    Returns:
-        Configuration dictionary for the specified path
-    """
-    try:
-        if path_type == 'small_batch':
-            config = router.get_queue_config('small_batch')
-        elif path_type == 'large_batch':
-            config = router.get_queue_config('large_batch')
-        else:
-            return jsonify({
-                'success': False,
-                'message': f'Invalid path_type: {path_type}. Use "small_batch" or "large_batch"'
-            }), 400
-        
-        return jsonify({
-            'success': True,
-            'pathType': path_type,
-            'config': config
-        })
-    
-    except Exception as e:
-        logging.error(f"Error retrieving routing config: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': f'Error retrieving configuration: {str(e)}'
-        }), 500
 
 @data_bp.route('/get_<table_name>', methods=['GET'])
 def get_table_data(table_name):

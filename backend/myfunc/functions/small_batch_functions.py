@@ -5,7 +5,7 @@ This function is triggered by ADF pipeline and handles:
 1. Reading raw data from blob storage
 2. Transforming data through Silver layer (cleaning)
 3. Writing to ADLS Gen2 as Parquet
-4. Logging transformation metrics
+4. Updating JobProgress tracking table
 
 Trigger: Azure Data Factory (SmallBatchCleaningPipeline)
 Schedule: Every 10 minutes
@@ -24,7 +24,7 @@ import traceback
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from azure.storage.blob import BlobServiceClient, ContainerClient
-from transformations.pandas import PandasTransformer, json_to_dataframe
+from transformations.pandas import PandasTransformer
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +54,7 @@ def register_small_batch_functions(app: func.FunctionApp):
         4. Save Silver as Parquet to ADLS Gen2 (silver/cleaned/{userId}/{parentJobId}/{jobId}.parquet)
         5. Transform to Gold layer (dimensional modeling & aggregations)
         6. Save Gold as Parquet to ADLS Gen2 (gold/analytics/{userId}/{parentJobId}/{jobId}/*.parquet)
-        7. Log transformation metrics
-        8. Update JobProgress tracking table
+        7. Update JobProgress tracking table
         """
         try:
             # Parse message
@@ -63,7 +62,6 @@ def register_small_batch_functions(app: func.FunctionApp):
             user_id = message.get('userId')
             job_id = message.get('jobId')
             parent_job_id = message.get('parentJobId')
-            processing_timestamp = message.get('timestamp')
             
             logger.info(f"Processing small batch: job_id={job_id}, user_id={user_id}")
             
@@ -85,80 +83,46 @@ def register_small_batch_functions(app: func.FunctionApp):
                 # Download blob content from Bronze layer
                 download_stream = blob_client.download_blob()
                 raw_data_str = download_stream.readall().decode('utf-8')
-                
-                # Parse JSON from Bronze layer
-                raw_data = json_to_dataframe(raw_data_str)
-                logger.info(f"Read {len(raw_data)} raw records from Bronze layer (shanlee-raw-data)")
-                
+            
             except Exception as e:
                 logger.error(f"Failed to read raw data from blob: {str(e)}")
                 raise
             
             # Transform Bronze → Silver layer (Cleaning & Standardization)
             try:
-                silver_df = transformer.transform_to_silver(raw_data)
-                logger.info(f"Silver layer output ready: {len(silver_df)} cleaned records")
-                
+                silver_dataframes = transformer.transform_to_silver(raw_data_str)
+                # Since all entity tables have the same length (equal to raw record count)
+                raw_record_count = len(list(silver_dataframes.values())[0]) 
+           
             except Exception as e:
                 logger.error(f"Failed Silver transformation: {str(e)}")
                 raise
             
             # Save Silver layer to ADLS Gen2
             try:
-                # Get date from timestamp
-                run_date = datetime.fromisoformat(processing_timestamp).strftime('%Y-%m-%d')
-                
-                # Convert DataFrame to Parquet bytes
-                parquet_bytes = silver_df.to_parquet(index=False, compression='snappy')
-                
                 # Use BlobServiceClient for ADLS Gen2 (hierarchical namespace enabled)
-                adls_conn_str = os.environ.get('AzureWebJobsStorage')
-                adls_service_client = BlobServiceClient.from_connection_string(adls_conn_str)
+                adls_service_client = BlobServiceClient.from_connection_string(blob_conn_str)
                 
-                # Create Silver layer file path (cleaned, standardized data)
-                silver_file_path = f'silver/cleaned/{user_id}/{parent_job_id}/{job_id}.parquet'
-                
-                # Upload to ADLS Gen2 container (filesystem)
-                silver_blob_client = adls_service_client.get_blob_client(
-                    container='datalake',  # ADLS Gen2 filesystem name
-                    blob=silver_file_path
-                )
-                silver_blob_client.upload_blob(parquet_bytes, overwrite=True)
-                
-                logger.info(f"Saved {len(silver_df)} Silver layer records to {silver_file_path}")
+                # Save each entity DataFrame as separate Parquet file
+                for entity_type, entity_df in silver_dataframes.items():
+                    # Convert DataFrame to Parquet bytes
+                    parquet_bytes = entity_df.to_parquet(index=False, compression='snappy')
+                    
+                    # Create Silver layer file path for this entity type
+                    silver_file_path = f'pandas/{user_id}/{parent_job_id}/{job_id}/{entity_type}.parquet'
+                    
+                    # Upload to ADLS Gen2 container (filesystem)
+                    silver_blob_client = adls_service_client.get_blob_client(
+                        container='shanlee-cleaned-data',  # ADLS Gen2 filesystem name
+                        blob=silver_file_path
+                    )
+                    silver_blob_client.upload_blob(parquet_bytes, overwrite=True)
+                    
+                    logger.info(f"Saved {len(entity_df)} {entity_type} records to {silver_file_path}")
                 
             except Exception as e:
                 logger.error(f"Failed to save to ADLS Gen2: {str(e)}")
                 raise
-            
-            # Log transformation metrics
-            try:
-                metrics = {
-                    'jobId': job_id,
-                    'userId': user_id,
-                    'processingPath': 'small_batch',
-                    'rawRecords': len(raw_data),
-                    'silverRecords': len(silver_df),
-                    'duplicatesRemoved': 0,  # Simplified - can be calculated if needed
-                    'processingDurationSeconds': 0,  # Simplified
-                    'transformationTimestamp': processing_timestamp,
-                    'functionExecutionTime': datetime.utcnow().isoformat()
-                }
-                
-                # Store metrics in blob for monitoring
-                metrics_blob_client = blob_service_client.get_blob_client(
-                    container='transformation-metrics',
-                    blob=f'{run_date}/{job_id}_metrics.json'
-                )
-                metrics_blob_client.upload_blob(
-                    json.dumps(metrics, indent=2),
-                    overwrite=True
-                )
-                
-                logger.info(f"Metrics logged: {metrics}")
-                
-            except Exception as e:
-                logger.warning(f"Failed to log metrics (non-critical): {str(e)}")
             
             logger.info(f"Small batch transformation completed successfully for job {job_id}")
             

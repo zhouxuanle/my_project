@@ -5,22 +5,21 @@ Handles cleaning and deduplication of user data from raw JSON sources.
 """
 
 import pandas as pd
+from typing import List, Dict
 
 
-def transform_user_data(raw_data: pd.DataFrame) -> pd.DataFrame:
+def transform_user_data(user_records: List[Dict]) -> pd.DataFrame:
     """
     Complete user data transformation pipeline.
 
     Args:
-        raw_data: Raw DataFrame containing nested user data
+        user_records: List of user dictionaries
 
     Returns:
         Transformed DataFrame
     """
-    # Extract user data from nested structure
-    if 'user' not in raw_data.columns:
-        raise ValueError("Raw data must contain 'user' column with nested user data")
-    user_df = pd.json_normalize(raw_data['user'])
+    # Convert list of dicts to DataFrame
+    user_df = pd.DataFrame(user_records)
 
     # Clean text fields: trim whitespace and convert to lowercase
     text_columns = ['real_name', 'company', 'job']
@@ -29,10 +28,9 @@ def transform_user_data(raw_data: pd.DataFrame) -> pd.DataFrame:
             user_df[col] = user_df[col].astype(str).str.strip().str.lower()
 
     # Remove duplicates based on real_name (keep first occurrence)
-    if 'real_name' not in user_df.columns:
-        raise ValueError("Deduplication column 'real_name' not found in DataFrame")
-    user_df = user_df.sort_values('real_name')
-    user_df = user_df.drop_duplicates(subset=['real_name'], keep='first')
-    user_df = user_df.reset_index(drop=True)
+    if 'real_name' in user_df.columns:
+        user_df = user_df.sort_values('real_name')
+        user_df = user_df.drop_duplicates(subset=['real_name'], keep='first')
+        user_df = user_df.reset_index(drop=True)
 
     return user_df

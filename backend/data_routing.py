@@ -27,13 +27,12 @@ This module handles routing of data to appropriate processing paths based on siz
 Features:
 - Determines queue destination based on data volume
 - Tracks routing decisions for monitoring
-- Supports both direct routing (count-based) and estimated routing (size-based)
+- Supports direct routing based on record count
 """
 
 import json
+import base64
 import logging
-from typing import Dict, Tuple
-from datetime import datetime
 from azure.storage.queue import QueueClient
 
 logger = logging.getLogger(__name__)
@@ -68,10 +67,8 @@ class DataRouter:
         user_id: str,
         count: int,
         job_id: str,
-        parent_job_id: str,
-        total_chunks: int = 1,
-        chunk_index: int = 0
-    ) -> Tuple[str, str]:
+        parent_job_id: str
+    ) -> str:
         """
         Prepare and queue a message to the appropriate processing queue.
         
@@ -80,11 +77,9 @@ class DataRouter:
             count: Number of records to generate
             job_id: Unique job identifier
             parent_job_id: Parent job ID for chunked processing
-            total_chunks: Total number of chunks in this job
-            chunk_index: Current chunk index (0-based)
             
         Returns:
-            Tuple of (queue_name, message_id) on success
+            Queue name where the message was sent
             
         Raises:
             ValueError: If required parameters are missing or invalid
@@ -98,13 +93,11 @@ class DataRouter:
         message = {
             'userId': user_id,
             'jobId': job_id,
-            'parentJobId': parent_job_id,
-            'count': count,
-            'totalChunks': total_chunks,
-            'chunkIndex': chunk_index,
-            'processingPath': path,
-            'timestamp': self._get_timestamp()
+            'parentJobId': parent_job_id
         }
+        
+        encoded_message = base64.b64encode(json.dumps(message).encode('utf-8')).decode('utf-8')
+
         
         try:
             # Queue the message
@@ -112,71 +105,15 @@ class DataRouter:
                 self.connection_string,
                 queue_name
             )
-            result = queue_client.send_message(json.dumps(message))
+            result = queue_client.send_message(encoded_message)
             
             logger.info(
                 f"Message queued to {queue_name}: job_id={job_id}, "
-                f"count={count}, path={path}, message_id={result['id']}"
+                f"count={count}, path={path}"
             )
             
-            return queue_name, result['id']
+            return queue_name
             
         except Exception as e:
             logger.error(f"Failed to queue message to {queue_name}: {str(e)}")
             raise
-    
-    def get_queue_config(self, path: str) -> Dict:
-        """
-        Get configuration for a specific processing path.
-        
-        Args:
-            path: ProcessingPath enum value
-            
-        Returns:
-            Dictionary with queue configuration
-        """
-        configs = {
-            self.small_path: {
-                'queue_name': self.small_queue_name,
-                'adf_trigger_type': 'ScheduleTrigger',
-                'adf_trigger_interval': 10,  # minutes
-                'adf_trigger_frequency': 'Minute',
-                'processor': 'Azure Function (Pandas)',
-                'expected_throughput': '~5-10k records per batch',
-                'max_concurrent_jobs': 10,
-                'storage_account_tier': 'Standard'
-            },
-            self.large_path: {
-                'queue_name': self.large_queue_name,
-                'adf_trigger_type': 'ScheduleTrigger',
-                'adf_trigger_interval': 1,  # day
-                'adf_trigger_frequency': 'Day',
-                'processor': 'Azure Databricks (PySpark)',
-                'expected_throughput': '100k+ records per batch',
-                'max_concurrent_jobs': 3,
-                'storage_account_tier': 'Premium'
-            }
-        }
-        return configs.get(path, {})
-    
-    @staticmethod
-    def _get_timestamp() -> str:
-        """Get current timestamp in ISO format"""
-        return datetime.utcnow().isoformat() + 'Z'
-    
-    @staticmethod
-    def estimate_records_from_size(size_bytes: int) -> int:
-        """
-        Estimate number of records from blob size.
-        
-        Note: This is a rough estimate and may vary based on data complexity.
-        
-        Args:
-            size_bytes: Size of the data in bytes
-            
-        Returns:
-            Estimated record count
-        """
-        # Average size per complete record entry (all 11 entities)
-        avg_bytes_per_record = 1024  # Rough estimate: 1KB per complete entry
-        return max(1, size_bytes // avg_bytes_per_record)
