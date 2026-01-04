@@ -69,15 +69,6 @@ CREATE  TABLE IF NOT EXISTS `wishlist` (
   `deleted_at` timestamp
 );
 
-CREATE  TABLE IF NOT EXISTS `cart` (
-  `id` varchar(255) PRIMARY KEY,
-  `order_id` varchar(255),
-  `products_sku_id` varchar(255),
-  `quantity` integer,
-  `created_at` timestamp,
-  `updated_at` timestamp
-);
-
 
 CREATE  TABLE IF NOT EXISTS `order_details` (
   `id` varchar(255) PRIMARY KEY,
@@ -113,15 +104,11 @@ ALTER TABLE `order_details` ADD FOREIGN KEY (`user_id`) REFERENCES `users` (`id`
 
 ALTER TABLE `wishlist` ADD FOREIGN KEY (`products_sku_id`) REFERENCES `products_skus` (`id`);
 
-ALTER TABLE `cart` ADD FOREIGN KEY (`products_sku_id`) REFERENCES `products_skus` (`id`);
-
 ALTER TABLE `order_item` ADD FOREIGN KEY (`products_sku_id`) REFERENCES `products_skus` (`id`);
 
 ALTER TABLE `order_details` ADD FOREIGN KEY (`payment_id`) REFERENCES `payment_details` (`id`);
 
 ALTER TABLE `order_item` ADD FOREIGN KEY (`order_id`) REFERENCES `order_details` (`id`);
-
-ALTER TABLE `cart` ADD FOREIGN KEY (`order_id`) REFERENCES `order_details` (`id`);
 
 ALTER TABLE `sub_categories` ADD FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`);
 

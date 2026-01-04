@@ -250,7 +250,6 @@ Retrieve the most recent records from a specific table.
 - `payment` - Payment details
 - `order` - Order details
 - `order_item` - Order items
-- `cart` - Shopping cart data
 
 **Example Request:**
 ```

@@ -38,9 +38,8 @@ def write_to_db():
             orders = []
             wishlists = []
             order_items = []
-            carts = []
 
-            def append_data(user, address, category, subcategory, product, products_sku, payment, order, wishlist, order_item, cart):
+            def append_data(user, address, category, subcategory, product, products_sku, payment, order, wishlist, order_item):
                 users.append((user['id'], user['username'], user['real_name'], user['phone_number'], user['sex'], user['job'], user['company'], user['email'], user['password'], user['birth_of_date'], user['age'], user['create_time'], user['delete_time']))
                 addresses.append((address['id'], address['user_id'], address['title'], address['address_line'], address['country'], address['city'], address['postal_code'], address['create_time'], address['delete_time']))
                 categories.append((category['id'], category['name'], category['description'], category['create_time'], category['delete_time']))
@@ -51,7 +50,6 @@ def write_to_db():
                 orders.append((order['id'], order['user_id'], order['payment_id'], order['create_time'], order['updated_at']))
                 wishlists.append((wishlist['id'], wishlist['user_id'], wishlist['products_sku_id'], wishlist['create_time'], wishlist['delete_time']))
                 order_items.append((order_item['id'], order_item['order_id'], order_item['products_sku_id'], order_item['quantity'], order_item['create_time'], order_item['updated_at']))
-                carts.append((cart['id'], cart['order_id'], cart['products_sku_id'], cart['quantity'], cart['create_time'], cart['updated_at']))
 
             for _ in range(data_count):
                 py_start = time.perf_counter()
@@ -65,10 +63,9 @@ def write_to_db():
                 payment = gd.generate_payment_details_data()
                 order = gd.generate_order_details_data(user,payment)
                 order_item = gd.generate_order_item_data(products_sku,order)
-                cart = gd.generate_cart_data(products_sku,order)
                 py_end = time.perf_counter()
 
-                append_data(user, address, category, subcategory, product, products_sku, payment, order, wishlist, order_item, cart)
+                append_data(user, address, category, subcategory, product, products_sku, payment, order, wishlist, order_item)
                 messages.append(f"your user name is : {user['username']}")
                 user_ids.append(user['id'])
                 python_total_time += (py_end - py_start)
@@ -85,7 +82,6 @@ def write_to_db():
             cursor.executemany("INSERT INTO order_details (id, user_id, payment_id, created_at, updated_at) VALUES (%s, %s, %s, %s, %s)", orders)
             cursor.executemany("INSERT INTO wishlist (id, user_id, products_sku_id, created_at, deleted_at) VALUES (%s, %s, %s, %s, %s)", wishlists)
             cursor.executemany("INSERT INTO order_item (id, order_id, products_sku_id, quantity, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)", order_items)
-            cursor.executemany("INSERT INTO cart (id, order_id, products_sku_id, quantity, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s)", carts)
             connection.commit()
             sql_end = _time.perf_counter()
             sql_total_time = sql_end - sql_start
@@ -204,8 +200,7 @@ def get_table_data(table_name):
         'wishlist': 'wishlist',
         'payment': 'payment_details',
         'order': 'order_details',
-        'order_item': 'order_item',
-        'cart': 'cart'
+        'order_item': 'order_item'
     }
     
     connection = None

@@ -56,7 +56,6 @@ def register_queue_functions(app: func.FunctionApp):
                 payment = gd.generate_payment_details_data()
                 order = gd.generate_order_details_data(user, payment)
                 order_item = gd.generate_order_item_data(products_sku, order)
-                cart = gd.generate_cart_data(products_sku, order)
                 generated_data.append({
                     "user": user,
                     "address": address,
@@ -67,8 +66,7 @@ def register_queue_functions(app: func.FunctionApp):
                     "wishlist": wishlist,
                     "payment": payment,
                     "order": order,
-                    "order_item": order_item,
-                    "cart": cart
+                    "order_item": order_item
                 })
 
             # Upload to Azure Blob Storage

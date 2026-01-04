@@ -49,11 +49,6 @@ export const TABLE_CONFIGS = {
     label: 'Order Item Table',
     columns: ['ID', 'Order ID', 'Product SKU ID', 'Quantity', 'create_time'],
     fields: ['id', 'order_id', 'products_sku_id', 'quantity', 'create_time']
-  },
-  cart: {
-    label: 'Cart Table',
-    columns: ['ID', 'Order ID', 'Product SKU ID', 'Quantity', 'create_time'],
-    fields: ['id', 'order_id', 'products_sku_id', 'quantity', 'create_time']
   }
 };
 

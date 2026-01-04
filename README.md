@@ -239,7 +239,6 @@ The application requires the following MySQL tables:
 - `order_item` - Order line items
 - `payment_details` - Payment transactions
 - `wishlist` - User wishlists
-- `cart` - Shopping cart items
 
 ## Usage
 
@@ -367,7 +366,7 @@ Authorization: Bearer <access_token>
 ```
 
 #### GET `/get_<table_name>`
-Retrieve data from a specific table. Available tables: `user`, `address`, `category`, `subcategory`, `product`, `products_sku`, `wishlist`, `payment`, `order`, `order_item`, `cart`.
+Retrieve data from a specific table. Available tables: `user`, `address`, `category`, `subcategory`, `product`, `products_sku`, `wishlist`, `payment`, `order`, `order_item`.
 
 **Example:**
 ```

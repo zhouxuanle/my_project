@@ -2,7 +2,7 @@ import React from 'react';
 
 export const TableContainer = ({ children, className = '' }) => {
   return (
-    <div className={`mx-auto p-dynamic bg-white/10 rounded-lg w-[90%] overflow-hidden max-h-[calc(100vh-100px)] ${className}`}>
+    <div className={`mx-auto p-dynamic bg-white/10 rounded-lg w-[90%] ${className}`}>
       {children}
     </div>
   );

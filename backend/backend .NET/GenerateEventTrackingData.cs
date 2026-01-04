@@ -19,8 +19,6 @@ namespace MyProject.Backend.DataGeneration
 
     public record Wishlist(string Id, string UserId, string ProductsSkuId, DateTime CreateTime, DateTime DeleteTime);
 
-    public record Cart(string Id, string OrderId, string ProductsSkuId, int Quantity, DateTime CreateTime, DateTime UpdatedAt);
-
     public record OrderDetails(string Id, string UserId, string PaymentId, DateTime CreateTime, DateTime UpdatedAt);
 
     public record OrderItem(string Id, string OrderId, string ProductsSkuId, long Quantity, DateTime CreateTime, DateTime UpdatedAt);
@@ -146,16 +144,6 @@ namespace MyProject.Backend.DataGeneration
             var wishlistId = $"wishlist_id-{Guid.NewGuid()}";
 
             return new Wishlist(wishlistId, user.Id, productsSku.Id, createTime, deleteTime);
-        }
-
-        public Cart GenerateCartData(Sku productsSku, OrderDetails order)
-        {
-            var createTime = DateTime.Now;
-            var updateTime = _faker.Date.Between(createTime, DateTime.Now);
-            var cartId = $"cart_id-{Guid.NewGuid()}";
-            var quantity = _faker.Random.Int(1, 9999);
-
-            return new Cart(cartId, order.Id, productsSku.Id, quantity, createTime, updateTime);
         }
 
         public OrderDetails GenerateOrderDetailsData(UserInfo user, PaymentDetails payment)

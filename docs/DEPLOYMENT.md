@@ -286,19 +286,6 @@ CREATE TABLE wishlist (
     INDEX idx_user_id (user_id),
     INDEX idx_created_at (created_at)
 );
-
-CREATE TABLE cart (
-    id VARCHAR(255) PRIMARY KEY,
-    order_id VARCHAR(255),
-    products_sku_id VARCHAR(255),
-    quantity INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES order_details(id),
-    FOREIGN KEY (products_sku_id) REFERENCES products_skus(id),
-    INDEX idx_order_id (order_id),
-    INDEX idx_created_at (created_at)
-);
 ```
 
 ## Backend Deployment

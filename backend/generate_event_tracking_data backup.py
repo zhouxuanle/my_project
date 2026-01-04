@@ -1,0 +1,212 @@
+import uuid
+import random
+from datetime import datetime, timedelta
+from faker import Faker
+from faker_commerce import Provider as CommerceProvider
+from random import randint
+
+# Initialize Faker with a locale (singleton pattern for better performance)
+fake = Faker('en_US')
+
+# Add the commerce provider to the faker instance
+fake.add_provider(CommerceProvider)
+
+
+class DataGenerator:
+    def __init__(self):
+        pass
+
+    # Generate user_info Table Data
+    def generate_user_data(self):
+        create_time = datetime.now()
+        delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+        profile = fake.profile()
+        birth_of_date = fake.date_of_birth(minimum_age=18, maximum_age=75)
+        current_year = datetime.now().year
+        age = current_year - birth_of_date.year
+        user_id = f"user_id-{uuid.uuid4()}"
+        password_default = fake.password()
+        user_info_data = {
+            "id": user_id,
+            "username": profile['username'],
+            "real_name": profile['name'],
+            "phone_number": fake.phone_number(),
+            "sex": profile['sex'],
+            "job": profile['job'],
+            "company": profile['company'],
+            "email": profile['mail'],
+            "password": password_default,
+            "birth_of_date": birth_of_date,
+            "age": age,
+            "create_time": create_time,
+            "delete_time": delete_time
+        }
+        return user_info_data
+
+    # Generate Address Table Data
+    def generate_fake_address(self, user):
+        create_time = datetime.now()
+        delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+        address_titles = [
+            "Home Address",
+            "Work Address",
+            "Billing Address",
+            "Shipping Address",
+            "Vacation Home"
+        ]
+        # Combine address generation in fewer calls
+        full_address_line = f"{fake.street_address()} {fake.secondary_address()}"
+        address_id = f"address_id-{uuid.uuid4()}"
+        address_data = {
+            "id": address_id,
+            "user_id": user["id"],
+            "title": random.choice(address_titles),
+            "address_line": full_address_line,
+            "country": fake.country(),
+            "city": fake.city(),
+            "postal_code": fake.postcode(),
+            "create_time": create_time,
+            "delete_time": delete_time
+        }
+        return address_data
+
+
+    # Generate Categories Table Data
+    def generate_categories_data(self):
+        create_time = datetime.now()
+        delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+        category_id = f"category_id-{uuid.uuid4()}"
+        category_name = fake.ecommerce_category()
+        description = fake.text(max_nb_chars=10)
+        categories_data = {
+            "id": category_id,
+            "name": category_name,
+            "description": description,
+            "create_time": create_time,
+            "delete_time": delete_time
+        }
+        return categories_data
+
+
+    # Generate Subcategories Table Data
+    def generate_subcategories_data(self, category):
+        create_time = datetime.now()
+        delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+        subcategory_id = f"subcategory_id-{uuid.uuid4()}"
+        # Use non-unique word for subcategory name to avoid unique pool exhaustion
+        subcategory_name = fake.word().capitalize() + " Subcategory"
+        description = fake.text(max_nb_chars=50)
+        subcategories_data = {
+            "id": subcategory_id,
+            "parent_id": category["id"],
+            "name": subcategory_name,
+            "description": description,
+            "create_time": create_time,
+            "delete_time": delete_time
+        }
+        return subcategories_data
+
+
+    # Generate Products Table Data
+    def generate_products_data(self, subcategory):
+        create_time = datetime.now()
+        delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+        product_id = f"product_id-{uuid.uuid4()}"
+        # Use non-unique catch_phrase for product name
+        product_name = fake.catch_phrase()
+        product_description = fake.paragraph()
+        products_data = {
+            "id": product_id,
+            "name": product_name,
+            "description": product_description,
+            "category_id": subcategory["id"],
+            "create_time": create_time,
+            "delete_time": delete_time
+        }
+        return products_data
+
+
+    # Generate product_sku Table Data
+    def generate_sku_data(self, category, subcategory, product):
+        create_time = datetime.now()
+        delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+        # Use non-unique random_number for sku_number
+        sku_number = fake.random_number(digits=5, fix_len=True)
+        sku_id = f"{category['id'][-3:]}-{subcategory['id'][-3:]}-{product['id'][-3:]}-{sku_number}"
+        price = round(random.uniform(5.0, 500.0), 2)
+        stock = random.randint(0, 9999999)
+        skus_data = {
+            "id": sku_id,
+            "product_id": product["id"],
+            "price": price,
+            "quantity": stock,
+            "create_time": create_time,
+            "delete_time": delete_time
+        }
+        return skus_data
+
+    # Generate Wishlist Table Data
+    def generate_wishlist_data(self, products_sku, user):
+        create_time = datetime.now()
+        delete_time = fake.date_time_between(start_date=create_time, end_date='now')
+        wishlist_id = f"wishlist_id-{uuid.uuid4()}"
+        wishlists_data = {
+            'id': wishlist_id,
+            'user_id': user["id"],
+            'products_sku_id': products_sku["id"],
+            "create_time": create_time,
+            "delete_time": delete_time
+        }
+        return wishlists_data
+
+    # Generate Order_details Table Data
+    def generate_order_details_data(self, user, payment):
+        create_time = datetime.now()
+        update_time = fake.date_time_between(start_date=create_time, end_date='now')
+        order_details_id = f"order_details_id-{uuid.uuid4()}"
+        order_details_data = {
+            'id': order_details_id,
+            'user_id': user["id"],
+            'payment_id': payment["id"],
+            "create_time": create_time,
+            'updated_at': update_time
+        }
+        return order_details_data
+
+
+    # Generate Order_item Table Data
+    def generate_order_item_data(self, products_sku, order):
+        create_time = datetime.now()
+        update_time = fake.date_time_between(start_date=create_time, end_date='now')
+        order_item_id = f"order_item_id-{uuid.uuid4()}"
+        order_item_data = {
+            'id': order_item_id,
+            'order_id': order["id"],
+            'products_sku_id': products_sku["id"],
+            'quantity': random.randint(1, 99999999),
+            "create_time": create_time,
+            'updated_at': update_time
+        }
+        return order_item_data
+
+
+    # Generate Payment_details Table Data
+    def generate_payment_details_data(self):
+        create_time = datetime.now()
+        update_time = fake.date_time_between(start_date=create_time, end_date='now')
+        payment_details_id = f"payment_details_id-{uuid.uuid4()}"
+        payment_statuses = ['Success', 'Pending', 'Failed', 'Refunded']
+        payment_details_data = {
+            'id': payment_details_id,
+            #这里后面通过spark计算，写入这个字段里
+            'amount': 0,
+            'provider': fake.credit_card_full().split('\n')[0].strip(),
+            'status': random.choice(payment_statuses),
+            "create_time": create_time,
+            'updated_at': update_time
+        }
+        return payment_details_data
+
+
+
+
