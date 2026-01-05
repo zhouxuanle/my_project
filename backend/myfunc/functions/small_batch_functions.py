@@ -25,6 +25,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 
 from azure.storage.blob import BlobServiceClient, ContainerClient
 from transformations.pandas import PandasTransformer
+from utils.job_tracking import JobTracker
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ def register_small_batch_functions(app: func.FunctionApp):
                     parquet_bytes = entity_df.to_parquet(index=False, compression='snappy')
                     
                     # Create Silver layer file path for this entity type
-                    silver_file_path = f'pandas/{user_id}/{parent_job_id}/{job_id}/{entity_type}.parquet'
+                    silver_file_path = f'temp/pandas/{user_id}/{parent_job_id}/{job_id}/{entity_type}.parquet'
                     
                     # Upload to ADLS Gen2 container (filesystem)
                     silver_blob_client = adls_service_client.get_blob_client(
@@ -124,12 +125,68 @@ def register_small_batch_functions(app: func.FunctionApp):
                 logger.error(f"Failed to save to ADLS Gen2: {str(e)}")
                 raise
             
+            # Track completion using shared helper
+            try:
+                tracker = JobTracker(os.environ['AzureWebJobsStorage'])
+                tracker.mark_job_completed(parent_job_id, job_id)
+                
+                total_jobs = message.get('total_jobs', 1)  # From queue message
+                if tracker.is_all_jobs_completed(parent_job_id, total_jobs):
+                    # All jobs done: Trigger ADF and send SignalR
+                    trigger_adf_pipeline(user_id, parent_job_id)
+                    send_signalr_notification(user_id, parent_job_id)
+            except Exception as e:
+                logger.error(f"Failed completion tracking: {str(e)}")
+            
             logger.info(f"Small batch transformation completed successfully for job {job_id}")
             
         except Exception as e:
             logger.error(f"Error in transform_small_batch_queue: {str(e)}")
             logger.error(traceback.format_exc())
             raise
+
+
+def trigger_adf_pipeline(user_id, parent_job_id):
+    """Trigger ADF pipeline via REST API."""
+    import requests
+    from azure.identity import DefaultAzureCredential
     
+    url = f"https://management.azure.com/subscriptions/{os.environ['ADF_SUBSCRIPTION_ID']}/resourceGroups/{os.environ['ADF_RESOURCE_GROUP']}/providers/Microsoft.DataFactory/factories/{os.environ['ADF_FACTORY_NAME']}/pipelines/{os.environ['ADF_PIPELINE_NAME']}/createRun?api-version=2018-06-01"
     
-    logger.info("Small batch functions registered")
+    credential = DefaultAzureCredential()
+    token = credential.get_token("https://management.azure.com/.default")
+    
+    headers = {
+        'Authorization': f"Bearer {token.token}",
+        'Content-Type': 'application/json'
+    }
+    payload = {
+        'parameters': {
+            'user_id': user_id,
+            'parent_job_id': parent_job_id,
+            'entity_types': ["user", "address", "product", "category", "subcategory", "order", "order_item", "payment", "products_sku", "wishlist"]
+        }
+    }
+    
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code == 200:
+        logger.info(f"ADF pipeline triggered for {parent_job_id}")
+    else:
+        logger.error(f"Failed to trigger ADF: {response.text}")
+
+
+def send_signalr_notification(user_id, parent_job_id):
+    """Send SignalR message for notifications."""
+    from azure.signalr import AzureSignalRClient
+    
+    client = AzureSignalRClient(os.environ['AZURE_SIGNALR_CONNECTION_STRING'])
+    message = {
+        'userId': user_id,
+        'parentJobId': parent_job_id,
+        'message': f'All data cleaning jobs completed for parent job {parent_job_id}. Merging in progress.'
+    }
+    client.send_to_user(user_id, 'notification', message)
+    logger.info(f"SignalR notification sent for {parent_job_id}")
+
+
+logger.info("Small batch functions registered")
