@@ -158,7 +158,8 @@ def clean_data():
                 user_id=user_id,
                 count=data_count,
                 job_id=job_id,
-                parent_job_id=parent_job_id
+                parent_job_id=parent_job_id,
+                total_jobs=len(job_ids)
             )
         
         # All chunks routed to same queue (based on count), so get decision once

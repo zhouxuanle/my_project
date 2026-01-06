@@ -67,7 +67,8 @@ class DataRouter:
         user_id: str,
         count: int,
         job_id: str,
-        parent_job_id: str
+        parent_job_id: str,
+        total_jobs: int
     ) -> str:
         """
         Prepare and queue a message to the appropriate processing queue.
@@ -77,6 +78,7 @@ class DataRouter:
             count: Number of records to generate
             job_id: Unique job identifier
             parent_job_id: Parent job ID for chunked processing
+            total_jobs: Total number of jobs for this parent job
             
         Returns:
             Queue name where the message was sent
@@ -93,7 +95,8 @@ class DataRouter:
         message = {
             'userId': user_id,
             'jobId': job_id,
-            'parentJobId': parent_job_id
+            'parentJobId': parent_job_id,
+            'total_jobs': total_jobs
         }
         
         encoded_message = base64.b64encode(json.dumps(message).encode('utf-8')).decode('utf-8')
