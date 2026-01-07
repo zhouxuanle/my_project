@@ -40,7 +40,6 @@ export function useSignalR(addNotification) {
           const jobData = Array.isArray(data) ? data[0] : data;
           addNotification('job', {
             id: jobData.id,
-            jobId: jobData.jobId,
             message: jobData.message,
             status: jobData.status,
             timestamp: new Date().toISOString(),

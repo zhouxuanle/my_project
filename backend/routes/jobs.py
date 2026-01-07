@@ -17,7 +17,7 @@ def generate_job():
     current_user_id = get_jwt_identity()
     data = request.get_json()
     total_count = data.get('dataCount', 1)
-    batch_size = 1000  # You can adjust this value as needed
+    batch_size = 100  # You can adjust this value as needed
 
     parent_job_id = str(uuid.uuid4())
     job_ids = []
@@ -83,8 +83,8 @@ def get_raw_data(parent_job_id, table_name):
                     extracted_data.extend(chunk_extracted)
                     
                     # Stop if we have enough data
-                    if len(extracted_data) >= 100:
-                        extracted_data = extracted_data[:100]
+                    if len(extracted_data) >= 10:
+                        extracted_data = extracted_data[:10]
                         break
             else:
                 return jsonify({'success': False, 'message': 'Data not found or not ready yet'}), 404

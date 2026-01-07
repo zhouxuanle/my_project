@@ -14,7 +14,6 @@ export default function useNotificationActions() {
         data.notifications.forEach(notif => {
           addNotification('job', {
             id: notif.id,
-            jobId: notif.jobId,
             message: notif.message,
             timestamp: notif.timestamp,
             status: notif.status

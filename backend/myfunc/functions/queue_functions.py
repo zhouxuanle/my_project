@@ -135,7 +135,6 @@ def register_queue_functions(app: func.FunctionApp):
                     notification_storage = NotificationStorage(conn_str)
                     notification_id = notification_storage.save_notification(
                         user_id=user_id,
-                        job_id=parent_job_id,
                         message=log_msg,
                         status='completed'
                     )
@@ -147,7 +146,6 @@ def register_queue_functions(app: func.FunctionApp):
                     'target': 'JobStatusUpdate',
                     'arguments': [{
                         "id": notification_id,
-                        "jobId": parent_job_id,
                         "status": "completed",
                         "message": log_msg
                     }]

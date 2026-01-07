@@ -22,13 +22,12 @@ class NotificationStorage:
         except ResourceExistsError:
             pass
     
-    def save_notification(self, user_id: str, job_id: str, message: str, status: str = 'completed'):
+    def save_notification(self, user_id: str, message: str, status: str = 'completed'):
         """
         Save a notification to persistent storage
         
         Args:
             user_id: User identifier
-            job_id: Job identifier
             message: Notification message
             status: Job status (completed, failed, etc.)
             
@@ -37,11 +36,10 @@ class NotificationStorage:
         """
         table_client = self.table_service_client.get_table_client(self.table_name)
         
-        notification_id = f"{job_id}_{int(datetime.utcnow().timestamp() * 1000)}"
+        notification_id = f"{user_id}_{int(datetime.utcnow().timestamp() * 1000)}"
         entity = {
             'PartitionKey': user_id,
             'RowKey': notification_id,
-            'jobId': job_id,
             'message': message,
             'status': status,
             'timestamp': datetime.utcnow().isoformat()
@@ -69,7 +67,6 @@ class NotificationStorage:
         for entity in entities:
             notifications.append({
                 'id': entity['RowKey'],
-                'jobId': entity.get('jobId'),
                 'message': entity.get('message'),
                 'status': entity.get('status'),
                 'timestamp': entity.get('timestamp')
