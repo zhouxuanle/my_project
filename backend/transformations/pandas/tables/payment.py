@@ -30,9 +30,9 @@ def transform_payment_data(payment_records: List[Dict]) -> pd.DataFrame:
         if col in payment_df.columns:
             payment_df[col] = payment_df[col].astype(str).str.strip().str.lower()
 
-    # Filter amount: ensure it's numeric and >= 0
+    # Clean amount column: remove non-numeric and limit to 0 <= amount < 10000
     if 'amount' in payment_df.columns:
         payment_df['amount'] = pd.to_numeric(payment_df['amount'], errors='coerce')
-        payment_df = payment_df[payment_df['amount'] >= 0]
+        payment_df = payment_df[payment_df['amount'].notna() & (payment_df['amount'] >= 0) & (payment_df['amount'] < 10000)]
 
     return payment_df

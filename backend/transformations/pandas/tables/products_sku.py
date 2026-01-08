@@ -21,20 +21,22 @@ def transform_products_sku_data(products_sku_records: List[Dict]) -> pd.DataFram
     # Convert list of dicts to DataFrame
     products_sku_df = pd.DataFrame(products_sku_records)
 
-    # Filter out rows containing 'invalid' in any column
+    # Filter out rows containing 'invalid' in any column FIRST
     products_sku_df = products_sku_df[~products_sku_df.apply(lambda row: row.astype(str).str.lower().str.contains('invalid').any(), axis=1)]
 
-    # Filter quantity: ensure it's <= 100
+    # Clean quantity column: remove non-integers and limit to 0 <= quantity < 10000
     if 'quantity' in products_sku_df.columns:
         products_sku_df['quantity'] = pd.to_numeric(products_sku_df['quantity'], errors='coerce')
-        products_sku_df = products_sku_df[products_sku_df['quantity'] <= 100]
+        products_sku_df = products_sku_df[products_sku_df['quantity'].notna() & (products_sku_df['quantity'] >= 0) & (products_sku_df['quantity'] < 10000)]
+        products_sku_df['quantity'] = products_sku_df['quantity'].astype(int)
 
-    # Filter price: ensure it's numeric and < 100000
+    # Clean price column: remove non-numeric and limit to 0 <= price < 10000
     if 'price' in products_sku_df.columns:
         products_sku_df['price'] = pd.to_numeric(products_sku_df['price'], errors='coerce')
-        products_sku_df = products_sku_df[products_sku_df['price'] < 100000]
+        products_sku_df = products_sku_df[products_sku_df['price'].notna() & (products_sku_df['price'] >= 0) & (products_sku_df['price'] < 10000)]
+        products_sku_df['price'] = products_sku_df['price'].astype(float)
 
-    # Remove duplicates based on id
+    # Remove duplicates based on id, keeping any one row
     if 'id' in products_sku_df.columns:
         products_sku_df = products_sku_df.drop_duplicates(subset=['id'])
 

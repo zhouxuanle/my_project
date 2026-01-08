@@ -66,19 +66,17 @@ class DataRouter:
         self,
         user_id: str,
         count: int,
-        job_id: str,
-        parent_job_id: str,
-        total_jobs: int
+        job_ids: list,  # Now a list
+        parent_job_id: str
     ) -> str:
         """
-        Prepare and queue a message to the appropriate processing queue.
+        Prepare and queue a message for the entire batch.
         
         Args:
             user_id: User ID making the request
             count: Number of records to generate
-            job_id: Unique job identifier
-            parent_job_id: Parent job ID for chunked processing
-            total_jobs: Total number of jobs for this parent job
+            job_ids: List of job identifiers for the batch
+            parent_job_id: Parent job ID for the batch
             
         Returns:
             Queue name where the message was sent
@@ -91,12 +89,11 @@ class DataRouter:
         path = self.small_path if count <= SMALL_BATCH_THRESHOLD else self.large_path
         queue_name = self.small_queue_name if path == self.small_path else self.large_queue_name
         
-        # Prepare message
+        # Prepare message for the entire batch
         message = {
             'userId': user_id,
-            'jobId': job_id,
-            'parentJobId': parent_job_id,
-            'total_jobs': total_jobs
+            'jobIds': job_ids,  # List of job IDs
+            'parentJobId': parent_job_id
         }
         
         encoded_message = base64.b64encode(json.dumps(message).encode('utf-8')).decode('utf-8')
@@ -111,8 +108,8 @@ class DataRouter:
             result = queue_client.send_message(encoded_message)
             
             logger.info(
-                f"Message queued to {queue_name}: job_id={job_id}, "
-                f"count={count}, path={path}"
+                f"Message queued to {queue_name}: parent_job_id={parent_job_id}, "
+                f"job_count={len(job_ids)}, path={path}"
             )
             
             return queue_name

@@ -151,16 +151,13 @@ def clean_data():
             blobs = list(container_client.list_blobs(name_starts_with=f"{user_id}/{parent_job_id}/"))
             job_ids = [blob.name.split('/')[-1].replace('.json', '') for blob in blobs]
         
-        # Queue one message per chunk for parallel processing
-        queue_name = None
-        for job_id in job_ids:
-            queue_name = router.queue_message_to_path(
-                user_id=user_id,
-                count=data_count,
-                job_id=job_id,
-                parent_job_id=parent_job_id,
-                total_jobs=len(job_ids)
-            )
+        # Queue one message for the entire batch
+        queue_name = router.queue_message_to_path(
+            user_id=user_id,
+            count=data_count,
+            job_ids=job_ids,  # Pass the list
+            parent_job_id=parent_job_id
+        )
         
         # All chunks routed to same queue (based on count), so get decision once
         processing_path = 'small_batch' if data_count <= 10000 else 'large_batch'
