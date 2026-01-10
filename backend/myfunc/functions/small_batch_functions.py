@@ -26,7 +26,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 from azure.storage.blob import BlobServiceClient, ContainerClient
 from transformations.pandas import PandasTransformer
 from .utils.job_tracking import JobTracker
-from utils.adf_utils import trigger_adf_pipeline
+from .utils.adf_utils import trigger_adf_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -132,18 +132,20 @@ def register_small_batch_functions(app: func.FunctionApp):
                 
                 # Track completion for this job
                 try:
-                    tracker = JobTracker(os.environ['AzureWebJobsStorage'])
+                    tracker = JobTracker(os.environ['AzureWebJobsStorage'], table_name='SmallBatchJobs')
                     tracker.mark_job_completed(user_id, parent_job_id, job_id)
                 except Exception as e:
                     logger.error(f"Failed completion tracking for job {job_id}: {str(e)}")
             
             # After processing all jobs, check if all are completed and trigger ADF
             try:
-                tracker = JobTracker(os.environ['AzureWebJobsStorage'])
+                tracker = JobTracker(os.environ['AzureWebJobsStorage'], table_name='SmallBatchJobs')
                 total_jobs = len(job_ids)
                 if tracker.is_all_jobs_completed(user_id, parent_job_id, total_jobs):
                     # All jobs done: Trigger ADF
                     trigger_adf_pipeline(user_id, parent_job_id)
+                    # Clean up completed job entities
+                    tracker.cleanup_completed_jobs(user_id, parent_job_id)
             except Exception as e:
                 logger.error(f"Failed final completion check: {str(e)}")
             

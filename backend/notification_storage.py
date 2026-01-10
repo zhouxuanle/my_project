@@ -4,6 +4,7 @@ Notification storage operations using Azure Table Storage
 from azure.data.tables import TableServiceClient
 from azure.core.exceptions import ResourceExistsError
 from datetime import datetime
+import logging
 import os
 
 
@@ -44,7 +45,7 @@ class NotificationStorage:
             'status': status,
             'timestamp': datetime.utcnow().isoformat()
         }
-        
+        logging.info(f"Saving notification for user {user_id} with ID {notification_id}")
         table_client.create_entity(entity)
         return notification_id
     

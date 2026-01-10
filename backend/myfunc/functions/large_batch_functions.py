@@ -21,7 +21,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from azure.storage.queue import QueueClient
-from utils.adf_utils import trigger_adf_pipeline
+from .utils.adf_utils import trigger_adf_pipeline
 
 logger = logging.getLogger(__name__)
 
