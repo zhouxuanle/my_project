@@ -6,11 +6,11 @@ import logging
 import os
 import json
 import sys
-import time
+import base64
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from azure.storage.blob import BlobServiceClient
+from azure.storage.queue import QueueClient
 from generate_event_tracking_data import DataGenerator
-from notification_storage import NotificationStorage
 from .utils.job_tracking import JobTracker
 
 
@@ -24,12 +24,10 @@ def register_queue_functions(app: func.FunctionApp):
     
     @app.queue_trigger(arg_name="azqueue", queue_name="data-generation-queue",
                        connection="AzureWebJobsStorage")
-    @app.generic_output_binding(arg_name="signalR", type="signalR", hubName="shanleeSignalR", 
-                                connectionStringSetting="AZURE_SIGNALR_CONNECTION_STRING")
-    def process_data_generation_job(azqueue: func.QueueMessage, signalR: func.Out[str]):
+    def process_data_generation_job(azqueue: func.QueueMessage):
         """
         Process data generation jobs from queue and upload to blob storage
-        Sends progress updates via SignalR
+        Enqueues completion notifications when all chunks are done
         """
         try:
             # Parse job message
@@ -83,44 +81,24 @@ def register_queue_functions(app: func.FunctionApp):
             if tracker.is_all_jobs_completed(user_id, parent_job_id, total_chunks):
                 log_msg = f'All {total_chunks} chunks completed for parent job {parent_job_id}. SignalR notification sent.'
                 
-                # Save persistent notification for offline users
-                notification_id = None
+                # Enqueue completion notification
                 try:
-                    conn_str = os.environ.get('AzureWebJobsStorage')
-                    notification_storage = NotificationStorage(conn_str)
-                    notification_id = notification_storage.save_notification(
-                        user_id=user_id,
-                        message=log_msg,
-                        status='completed'
-                    )
-                except Exception as notif_err:
-                    logging.error(f'Failed to save notification to storage: {str(notif_err)}')
-                
-                # Send real-time SignalR notification for online users (with same ID)
-                signalR.set(json.dumps({
-                    'target': 'JobStatusUpdate',
-                    'arguments': [{
-                        "id": notification_id,
-                        "status": "completed",
-                        "message": log_msg
-                    }]
-                }))
-                
-                logging.info('signalR message sent for job completion')
+                    queue_client = QueueClient.from_connection_string(blob_conn_str, "completion-notification-queue")
+                    notification_msg = {
+                        "user_id": user_id,
+                        "parent_job_id": parent_job_id,
+                        "log_msg": log_msg
+                    }
+                    encoded_message = base64.b64encode(json.dumps(notification_msg).encode('utf-8')).decode('utf-8')
+                    queue_client.send_message(encoded_message)
+                    logging.info(f'Enqueued completion notification for parent job {parent_job_id}')
+                except Exception as enqueue_err:
+                    logging.error(f'Failed to enqueue completion notification: {str(enqueue_err)}')
                 
                 # Clean up completed job entities
                 tracker.cleanup_completed_jobs(user_id, parent_job_id)
 
-            else:
-                # Get current completed count for progress message
-                partition_key = f"{user_id}_{parent_job_id}"
-                try:
-                    entities = list(tracker.table_client.query_entities(f"PartitionKey eq '{partition_key}' and status eq 'completed'"))
-                    completed_count = len(entities)
-                except Exception as e:
-                    logging.error(f"Failed to get completed count: {str(e)}")
-                    completed_count = 0
-                logging.info(f'Chunk {job_id} completed. Progress: {completed_count}/{total_chunks} for parent job {parent_job_id}.')
+
 
         except Exception as e:
             logging.error(f'Error processing job: {str(e)}')

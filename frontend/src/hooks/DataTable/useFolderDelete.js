@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import useDataTableStore from '../../stores/DataTable/dataTableStore';
 
-export default function useFolderDelete(onDeleteFolder, folders = []) {
+export default function useFolderDelete(onDeleteFolder, folders = [], onDeleteComplete = null) {
   const { selectedFolders, setSelectedFolders } = useDataTableStore();
   const [deletingFolder, setDeletingFolder] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -28,13 +28,22 @@ export default function useFolderDelete(onDeleteFolder, folders = []) {
 
   const handleConfirmDelete = useCallback(async () => {
     const foldersToDelete = Array.isArray(confirmDelete) ? confirmDelete : [confirmDelete];
-    setDeletingFolder(foldersToDelete.length === 1 ? foldersToDelete[0] : 'multiple');
+    setDeletingFolder(foldersToDelete);
     setDeleteError(null);
+    
+    // Close modal immediately
+    setConfirmDelete(null);
 
     try {
       // Delete all folders in parallel
+      // Notification logic is handled in deleteFolder callback
       await Promise.all(foldersToDelete.map(folder => onDeleteFolder(folder)));
-      setConfirmDelete(null);
+      
+      // Refetch folders to ensure UI is synchronized after all deletions
+      if (onDeleteComplete) {
+        await onDeleteComplete();
+      }
+      
       setSelectedFolders([]);
     } catch (error) {
       console.error('Delete error:', error);
@@ -42,7 +51,7 @@ export default function useFolderDelete(onDeleteFolder, folders = []) {
     } finally {
       setDeletingFolder(null);
     }
-  }, [onDeleteFolder, confirmDelete]);
+  }, [onDeleteFolder, onDeleteComplete, confirmDelete, setSelectedFolders]);
 
   const handleCancelDelete = useCallback(() => {
     setConfirmDelete(null);

@@ -12,6 +12,44 @@ from config import Config
 notifications_bp = Blueprint('notifications', __name__)
 
 
+@notifications_bp.route('/notifications/save', methods=['POST'])
+@jwt_required()
+def save_notification():
+    """Save a notification for the current user"""
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    
+    if not data or not data.get('message'):
+        return jsonify({
+            'success': False,
+            'error': 'Missing required field: message'
+        }), 400
+    
+    message = data.get('message')
+    status = data.get('status', 'completed')
+    
+    try:
+        notification_storage = NotificationStorage(Config.AZURE_STORAGE_CONNECTION_STRING)
+        notification_id = notification_storage.save_notification(
+            user_id=user_id,
+            message=message,
+            status=status
+        )
+        
+        return jsonify({
+            'success': True,
+            'notification_id': notification_id
+        })
+    except Exception as e:
+        import traceback
+        print(f"ERROR in save_notification: {str(e)}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @notifications_bp.route('/notifications/unread', methods=['GET'])
 @jwt_required()
 def get_unread_notifications():

@@ -117,7 +117,19 @@ export const api = {
     });
   },
 
+  // Metadata APIs
+  readDataMetadata: async (parentJobId) => {
+    return fetchWithAuth(`${API_BASE_URL}/read_data_metadata/${parentJobId}`, { method: 'GET' });
+  },
+
   // Notification APIs
+  saveNotification: async (message, status = 'completed') => {
+    return fetchWithAuth(`${API_BASE_URL}/notifications/save`, {
+      method: 'POST',
+      body: JSON.stringify({ message, status }),
+    });
+  },
+
   getUnreadNotifications: async () => {
     return fetchWithAuth(`${API_BASE_URL}/notifications/unread`, { method: 'GET' });
   },

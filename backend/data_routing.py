@@ -38,7 +38,7 @@ from azure.storage.queue import QueueClient
 logger = logging.getLogger(__name__)
 
 # Constants for routing decisions
-SMALL_BATCH_THRESHOLD = 10_000  # Records
+SMALL_BATCH_THRESHOLD = 10000  # Records
 
 class DataRouter:
     """

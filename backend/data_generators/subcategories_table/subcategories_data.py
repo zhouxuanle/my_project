@@ -31,7 +31,8 @@ def generate_subcategory_name(category_name):
         prefixes = ["Basic", "Advanced", "Premium", "Essential", "Specialty", "Standard", "Deluxe", "Compact"]
     
     prefix = random.choice(prefixes)
-    return f"{prefix} {category_name.replace('Home & ', '').replace('Outdoor ', '').replace('Professional ', '').replace('Kids\' ', '').replace('Luxury ', '').replace('Budget ', '').replace('Eco-Friendly ', '').replace('Smart ', '').replace('Vintage ', '')}"
+    cleaned_category = category_name.replace('Home & ', '').replace('Outdoor ', '').replace('Professional ', '').replace("Kids' ", '').replace('Luxury ', '').replace('Budget ', '').replace('Eco-Friendly ', '').replace('Smart ', '').replace('Vintage ', '')
+    return f"{prefix} {cleaned_category}"
 
 def generate_related_description(subcategory_name, category_name):
     """Generate a description related to the subcategory and category."""

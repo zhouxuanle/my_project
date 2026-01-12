@@ -106,24 +106,16 @@ def register_small_batch_functions(app: func.FunctionApp):
                 
                 # Save Silver layer to ADLS Gen2
                 try:
-                    # Use BlobServiceClient for ADLS Gen2 (hierarchical namespace enabled)
                     adls_service_client = BlobServiceClient.from_connection_string(blob_conn_str)
                     
-                    # Save each entity DataFrame as separate Parquet file
                     for entity_type, entity_df in silver_dataframes.items():
-                        # Convert DataFrame to Parquet bytes
                         parquet_bytes = entity_df.to_parquet(index=False, compression='snappy')
-                        
-                        # Create Silver layer file path for this entity type
                         silver_file_path = f'temp/pandas/{user_id}/{parent_job_id}/{job_id}/{entity_type}.parquet'
-                        
-                        # Upload to ADLS Gen2 container (filesystem)
                         silver_blob_client = adls_service_client.get_blob_client(
-                            container='shanlee-cleaned-data',  # ADLS Gen2 filesystem name
+                            container='shanlee-cleaned-data',  
                             blob=silver_file_path
                         )
                         silver_blob_client.upload_blob(parquet_bytes, overwrite=True)
-                        
                         logger.info(f"Saved {len(entity_df)} {entity_type} records to {silver_file_path}")
                     
                 except Exception as e:
@@ -142,9 +134,8 @@ def register_small_batch_functions(app: func.FunctionApp):
                 tracker = JobTracker(os.environ['AzureWebJobsStorage'], table_name='SmallBatchJobs')
                 total_jobs = len(job_ids)
                 if tracker.is_all_jobs_completed(user_id, parent_job_id, total_jobs):
-                    # All jobs done: Trigger ADF
-                    trigger_adf_pipeline(user_id, parent_job_id)
-                    # Clean up completed job entities
+                    # trigger_adf_pipeline(user_id, parent_job_id,'ADF_SMALL_BATCH_PIPELINE_NAME')
+                    
                     tracker.cleanup_completed_jobs(user_id, parent_job_id)
             except Exception as e:
                 logger.error(f"Failed final completion check: {str(e)}")

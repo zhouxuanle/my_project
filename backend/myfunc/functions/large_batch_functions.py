@@ -34,19 +34,19 @@ def register_large_batch_functions(app: func.FunctionApp):
         app: The main FunctionApp instance
     """
     
-    @app.timer_trigger(schedule="0 0 2 * * *", arg_name="timer",
-                       run_on_startup=False, use_monitor=False)
-    def process_large_batch_queue_daily(timer: func.TimerRequest):
+    @app.queue_trigger(arg_name="azqueue", queue_name="large-batch-queue",
+                       connection="AzureWebJobsStorage")
+    def process_large_batch_queue_daily(azqueue: func.QueueMessage):
         """
-        Timer-triggered function to process accumulated large batch messages daily.
+        Queue-triggered function to process large batch messages immediately.
         
-        Runs at 02:00 UTC daily. Checks large-batch-queue for messages.
-        If messages exist, processes all of them and triggers ADF pipelines.
+        Triggers when a message is added to large-batch-queue.
+        Checks for messages and processes all accumulated ones.
         
         **Processing Path:** Large Batch (>10k records)
         **Orchestrator:** Azure Data Factory
         **Processor:** Azure Databricks (PySpark)
-        **Trigger:** Timer (daily at 02:00 UTC)
+        **Trigger:** Queue (immediate on message)
         
         Data Flow:
         1. Check large-batch-queue for messages

@@ -4,8 +4,11 @@ import uuid
 import json
 import base64
 import logging
+from datetime import datetime
 from azure.storage.queue import QueueClient
 from azure.storage.blob import BlobServiceClient
+from azure.data.tables import TableServiceClient
+from azure.core.exceptions import ResourceExistsError
 from utils import NoProxy
 from config import Config
 
@@ -17,7 +20,7 @@ def generate_job():
     current_user_id = get_jwt_identity()
     data = request.get_json()
     total_count = data.get('dataCount', 1)
-    batch_size = 100  # You can adjust this value as needed
+    batch_size = Config.BATCH_SIZE  # Use config value
 
     parent_job_id = str(uuid.uuid4())
     job_ids = []
@@ -49,6 +52,17 @@ def generate_job():
             job_ids.append(job_id)
 
     print('all chunk messages have been sent---------------------')
+    
+    # Save metadata to Azure Table Storage
+    metadata_result = save_data_metadata(
+        user_id=current_user_id,
+        parent_job_id=parent_job_id,
+        dataCount=total_count
+    )
+    
+    if not metadata_result['success']:
+        logging.warning(f"Failed to save metadata for job {parent_job_id}: {metadata_result['message']}")
+    
     return jsonify({
         'parentJobId': parent_job_id,
         'jobIds': job_ids,
@@ -179,4 +193,107 @@ def delete_folder(parent_job_id):
             'success': False,
             'message': f'Error deleting folder: {str(e)}'
         }), 500
+
+
+@jobs_bp.route('/read_data_metadata/<parent_job_id>', methods=['GET'])
+@jwt_required()
+def read_data_metadata(parent_job_id):
+    """
+    Read data generation metadata for a specific folder.
+    
+    Args:
+        parent_job_id (str): Parent job ID
+    
+    Returns:
+        JSON: Metadata including dataCount or error
+    """
+    current_user_id = get_jwt_identity()
+    
+    try:
+        with NoProxy():
+            connection_string = Config.AZURE_STORAGE_CONNECTION_STRING
+            table_service_client = TableServiceClient.from_connection_string(
+                conn_str=connection_string
+            )
+            _ensure_table_exists(table_service_client, 'DataGenerationMetadata')
+            table_client = table_service_client.get_table_client(table_name='DataGenerationMetadata')
+            
+            # Retrieve entity by partition key and row key
+            entity = table_client.get_entity(
+                partition_key=current_user_id,
+                row_key=parent_job_id
+            )
+            
+            # Remove Azure-managed properties
+            metadata = {
+                k: v for k, v in entity.items() 
+                if k not in ('PartitionKey', 'RowKey', 'Timestamp', 'odata.metadata', 'odata.type')
+            }
+            
+            logging.info(f"Metadata retrieved for {parent_job_id}: {metadata}")
+            return jsonify({
+                'success': True,
+                'data': metadata
+            }), 200
+    except Exception as e:
+        logging.error(f"Error reading metadata for {parent_job_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error reading metadata: {str(e)}'
+        }), 404
+
+def _ensure_table_exists(table_service_client, table_name):
+    """Create table if it doesn't exist"""
+    try:
+        table_service_client.create_table(table_name)
+    except ResourceExistsError:
+        pass
+
+# Metadata Management Functions
+def save_data_metadata(user_id, parent_job_id, **metadata):
+    """
+    Save data generation metadata to Azure Table Storage.
+    
+    Args:
+        user_id (str): User ID - used as partition key
+        parent_job_id (str): Parent job ID - used as row key
+        **metadata: Variable keyword arguments containing metadata to store
+                   (e.g., dataCount=1000, totalChunks=10, status='completed')
+    
+    Returns:
+        dict: Success status and metadata entity or error message
+    """
+    try:
+        with NoProxy():
+            connection_string = Config.AZURE_STORAGE_CONNECTION_STRING
+            table_service_client = TableServiceClient.from_connection_string(
+                conn_str=connection_string
+            )
+            _ensure_table_exists(table_service_client, 'DataGenerationMetadata')
+            table_client = table_service_client.get_table_client(table_name='DataGenerationMetadata')
+            
+            # Create entity with partition key and row key
+            entity = {
+                'PartitionKey': user_id,
+                'RowKey': parent_job_id,
+                'Timestamp': datetime.utcnow(),
+                **metadata  # Add all metadata parameters
+            }
+            
+            # Insert or replace entity
+            table_client.upsert_entity(entity)
+            
+            logging.info(f"Metadata saved for {parent_job_id}: {metadata}")
+            return {
+                'success': True,
+                'message': 'Metadata saved successfully',
+                'entity': entity
+            }
+    except Exception as e:
+        logging.error(f"Error saving metadata for {parent_job_id}: {str(e)}")
+        return {
+            'success': False,
+            'message': f'Error saving metadata: {str(e)}'
+        }
+
 

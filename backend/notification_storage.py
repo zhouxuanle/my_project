@@ -23,7 +23,7 @@ class NotificationStorage:
         except ResourceExistsError:
             pass
     
-    def save_notification(self, user_id: str, message: str, status: str = 'completed'):
+    def save_notification(self, user_id: str, message: str, status: str = 'completed', parent_job_id: str = None):
         """
         Save a notification to persistent storage
         
@@ -31,11 +31,18 @@ class NotificationStorage:
             user_id: User identifier
             message: Notification message
             status: Job status (completed, failed, etc.)
+            parent_job_id: Optional parent job ID for deduplication
             
         Returns:
-            notification_id: The RowKey/ID of the created notification
+            notification_id: The RowKey/ID of the created notification, or None if already exists
         """
         table_client = self.table_service_client.get_table_client(self.table_name)
+        
+        # Check if notification with same details already exists
+        existing = self._check_existing_notification(user_id, message, status, parent_job_id)
+        if existing:
+            logging.info(f'Notification already exists for user {user_id} with same details')
+            return None
         
         notification_id = f"{user_id}_{int(datetime.utcnow().timestamp() * 1000)}"
         entity = {
@@ -45,9 +52,33 @@ class NotificationStorage:
             'status': status,
             'timestamp': datetime.utcnow().isoformat()
         }
+        if parent_job_id:
+            entity['parent_job_id'] = parent_job_id
         logging.info(f"Saving notification for user {user_id} with ID {notification_id}")
         table_client.create_entity(entity)
         return notification_id
+    
+    def _check_existing_notification(self, user_id: str, message: str, status: str, parent_job_id: str = None):
+        """
+        Check if a notification with the same details already exists
+        
+        Args:
+            user_id: User identifier
+            message: Notification message
+            status: Job status
+            parent_job_id: Optional parent job ID
+            
+        Returns:
+            True if exists, False otherwise
+        """
+        table_client = self.table_service_client.get_table_client(self.table_name)
+        
+        query_filter = f"PartitionKey eq '{user_id}' and message eq '{message}' and status eq '{status}'"
+        if parent_job_id:
+            query_filter += f" and parent_job_id eq '{parent_job_id}'"
+        
+        entities = list(table_client.query_entities(query_filter))
+        return len(entities) > 0
     
     def get_unread_notifications(self, user_id: str):
         """
