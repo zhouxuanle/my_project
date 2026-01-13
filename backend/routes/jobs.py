@@ -181,6 +181,24 @@ def delete_folder(parent_job_id):
             
             logging.info(f"User {current_user_id} deleted folder {parent_job_id} ({deleted_count} items)")
             
+            # Also delete the corresponding metadata from Azure Table Storage
+            try:
+                table_service_client = TableServiceClient.from_connection_string(
+                    conn_str=connection_string
+                )
+                table_client = table_service_client.get_table_client(table_name='DataGenerationMetadata')
+                
+                # Delete the metadata entity
+                table_client.delete_entity(
+                    partition_key=current_user_id,
+                    row_key=parent_job_id
+                )
+                
+                logging.info(f"Metadata deleted for folder {parent_job_id}")
+            except Exception as metadata_err:
+                # Log the error but don't fail the operation since blobs are already deleted
+                logging.warning(f"Failed to delete metadata for folder {parent_job_id}: {str(metadata_err)}")
+            
             return jsonify({
                 'success': True,
                 'message': 'Folder deleted successfully',

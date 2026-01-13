@@ -30,7 +30,7 @@ def save_notification():
     
     try:
         notification_storage = NotificationStorage(Config.AZURE_STORAGE_CONNECTION_STRING)
-        notification_id = notification_storage.save_notification(
+        notification_id, is_new = notification_storage.save_notification(
             user_id=user_id,
             message=message,
             status=status
@@ -38,7 +38,8 @@ def save_notification():
         
         return jsonify({
             'success': True,
-            'notification_id': notification_id
+            'notification_id': notification_id,
+            'is_new': is_new
         })
     except Exception as e:
         import traceback

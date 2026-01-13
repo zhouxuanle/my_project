@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Button from '../ui/Button';
 import FolderCard from './FolderCard';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
 import useFolderDelete from '../../hooks/DataTable/useFolderDelete';
-import { api } from '../../services/api';
+import useDataTableActions from '../../hooks/DataTable/useDataTableActions';
 
 function FoldersView({
   foldersLoading,
@@ -16,12 +16,10 @@ function FoldersView({
 }) {
   // Ensure folders is always an array
   const foldersList = Array.isArray(folders) ? folders : [];
-  const [cleaning, setCleaning] = useState(false);
-  const [cleanMessage, setCleanMessage] = useState('');
   
   const {
     selectedFolders,
-    deletingFolder,
+    isDeleting,
     confirmDelete,
     deleteError,
     handleToggleFolder,
@@ -30,62 +28,9 @@ function FoldersView({
     handleConfirmDelete,
     handleCancelDelete,
   } = useFolderDelete(onDeleteFolder, foldersList, onRefreshFolders);
+
+  const { handleCleanFolders, cleaning, cleanMessage } = useDataTableActions();
   const allSelected = foldersList.length > 0 && selectedFolders.length === foldersList.length;
-
-  const handleCleanFolders = async () => {
-    if (selectedFolders.length === 0) {
-      setCleanMessage('✗ Please select at least one folder to clean');
-      return;
-    }
-
-    setCleaning(true);
-    setCleanMessage('');
-    
-    const cleanedFolders = [];
-    const failedFolders = [];
-    
-    try {
-      // Process each selected folder sequentially
-      for (const folder of selectedFolders) {
-        try {
-          // Fetch dataCount from metadata API
-          const metadataResponse = await api.readDataMetadata(folder);
-          const metadataResult = await metadataResponse.json();
-
-          if (!metadataResult.success || !metadataResult.data.dataCount) {
-            failedFolders.push({ folder, error: 'No data count found' });
-            continue;
-          }
-
-          const dataCount = metadataResult.data.dataCount;
-          console.log(`Cleaning folder ${folder} with dataCount ${dataCount}`);
-          const response = await api.cleanData(dataCount, folder);
-          const result = await response.json();
-          
-          if (result.success) {
-            cleanedFolders.push(folder);
-          } else {
-            failedFolders.push({ folder, error: result.message });
-          }
-        } catch (error) {
-          failedFolders.push({ folder, error: error.message });
-        }
-      }
-
-      // Show summary message
-      if (cleanedFolders.length > 0 && failedFolders.length === 0) {
-        setCleanMessage(`✓ Cleaning queued for ${cleanedFolders.length} folder(s): ${cleanedFolders.join(', ')}`);
-      } else if (cleanedFolders.length > 0) {
-        setCleanMessage(`✓ Cleaning queued for ${cleanedFolders.length} folder(s). Failed: ${failedFolders.length}`);
-      } else {
-        setCleanMessage(`✗ Failed to clean any folders`);
-      }
-    } catch (error) {
-      setCleanMessage(`✗ Error: ${error.message}`);
-    } finally {
-      setCleaning(false);
-    }
-  };
 
   return (
     <div className="flex flex-col items-center w-full px-4">
@@ -115,10 +60,10 @@ function FoldersView({
                   type="checkbox"
                   checked={allSelected}
                   onChange={handleSelectAll}
-                  disabled={deletingFolder !== null && deletingFolder.length > 0}
+                  disabled={isDeleting || cleaning}
                   aria-label="Select all folders"
                   className={`w-5 h-5 accent-red-500 rounded border-2 border-gray-300 ${
-                    deletingFolder !== null && deletingFolder.length > 0 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                    isDeleting || cleaning ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
                   }`}
                 />
                 <span className="text-sm text-gray-600">
@@ -128,9 +73,10 @@ function FoldersView({
               
               <div className="flex gap-2">
                 <Button
-                  variant="action"
-                  onClick={handleCleanFolders}
-                  disabled={selectedFolders.length === 0 || cleaning || (deletingFolder !== null && deletingFolder.length > 0)}
+                  variant="primary"
+                  onClick={() => handleCleanFolders(selectedFolders)}
+                  disabled={selectedFolders.length === 0 || cleaning || isDeleting}
+                  className="text-sm font-bold italic"
                 >
                   {cleaning ? 'Cleaning...' : `Clean Data (${selectedFolders.length})`}
                 </Button>
@@ -138,9 +84,10 @@ function FoldersView({
                 <Button
                   variant="primary"
                   onClick={() => handleDeleteClick(selectedFolders)}
-                  disabled={selectedFolders.length === 0 || (deletingFolder !== null && deletingFolder.length > 0)}
+                  disabled={selectedFolders.length === 0 || cleaning || isDeleting}
+                  className="text-sm font-bold italic text-red-600"
                 >
-                  Delete Selected ({selectedFolders.length})
+                  {isDeleting ? 'Deleting...' : `Delete Selected (${selectedFolders.length})`}
                 </Button>
               </div>
             </div>
@@ -152,9 +99,9 @@ function FoldersView({
                   key={folder}
                   folder={folder}
                   onSelect={onSelectFolder}
-                  isSelected={selectedFolders.includes(folder)}
+                  checked={selectedFolders.includes(folder)}
                   onToggleSelect={handleToggleFolder}
-                  isDeleting={Array.isArray(deletingFolder) && deletingFolder.includes(folder)}
+                  disabled={isDeleting && selectedFolders.includes(folder)}
                 />
               ))}
             </div>

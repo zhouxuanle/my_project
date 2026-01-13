@@ -6,6 +6,7 @@ from azure.core.exceptions import ResourceExistsError
 from datetime import datetime
 import logging
 import os
+import hashlib
 
 
 class NotificationStorage:
@@ -25,7 +26,7 @@ class NotificationStorage:
     
     def save_notification(self, user_id: str, message: str, status: str = 'completed', parent_job_id: str = None):
         """
-        Save a notification to persistent storage
+        Save a notification to persistent storage with atomic duplicate prevention
         
         Args:
             user_id: User identifier
@@ -34,17 +35,14 @@ class NotificationStorage:
             parent_job_id: Optional parent job ID for deduplication
             
         Returns:
-            notification_id: The RowKey/ID of the created notification, or None if already exists
+            tuple: (notification_id, is_new) where is_new=True if notification was created, False if it already existed
         """
         table_client = self.table_service_client.get_table_client(self.table_name)
         
-        # Check if notification with same details already exists
-        existing = self._check_existing_notification(user_id, message, status, parent_job_id)
-        if existing:
-            logging.info(f'Notification already exists for user {user_id} with same details')
-            return None
+        # Create a deterministic RowKey based on parent_job_id to prevent duplicates per job
+        content_hash = f"{user_id}_{parent_job_id}_{message}_{status}"
+        notification_id = hashlib.md5(content_hash.encode()).hexdigest()[:16]
         
-        notification_id = f"{user_id}_{int(datetime.utcnow().timestamp() * 1000)}"
         entity = {
             'PartitionKey': user_id,
             'RowKey': notification_id,
@@ -54,31 +52,18 @@ class NotificationStorage:
         }
         if parent_job_id:
             entity['parent_job_id'] = parent_job_id
-        logging.info(f"Saving notification for user {user_id} with ID {notification_id}")
-        table_client.create_entity(entity)
-        return notification_id
-    
-    def _check_existing_notification(self, user_id: str, message: str, status: str, parent_job_id: str = None):
-        """
-        Check if a notification with the same details already exists
         
-        Args:
-            user_id: User identifier
-            message: Notification message
-            status: Job status
-            parent_job_id: Optional parent job ID
-            
-        Returns:
-            True if exists, False otherwise
-        """
-        table_client = self.table_service_client.get_table_client(self.table_name)
-        
-        query_filter = f"PartitionKey eq '{user_id}' and message eq '{message}' and status eq '{status}'"
-        if parent_job_id:
-            query_filter += f" and parent_job_id eq '{parent_job_id}'"
-        
-        entities = list(table_client.query_entities(query_filter))
-        return len(entities) > 0
+        try:
+            # Try to create entity - will fail if already exists
+            table_client.create_entity(entity)
+            logging.info(f"New notification created for user {user_id} with ID {notification_id}")
+            return notification_id, True  # New notification
+        except ResourceExistsError:
+            logging.info(f"Notification already exists for user {user_id} with ID {notification_id}")
+            return notification_id, False  # Already exists
+        except Exception as e:
+            logging.error(f"Failed to save notification for user {user_id}: {str(e)}")
+            return None, False
     
     def get_unread_notifications(self, user_id: str):
         """

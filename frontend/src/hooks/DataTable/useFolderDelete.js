@@ -3,9 +3,9 @@ import useDataTableStore from '../../stores/DataTable/dataTableStore';
 
 export default function useFolderDelete(onDeleteFolder, folders = [], onDeleteComplete = null) {
   const { selectedFolders, setSelectedFolders } = useDataTableStore();
-  const [deletingFolder, setDeletingFolder] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleToggleFolder = useCallback((folder) => {
     setSelectedFolders(
@@ -28,7 +28,7 @@ export default function useFolderDelete(onDeleteFolder, folders = [], onDeleteCo
 
   const handleConfirmDelete = useCallback(async () => {
     const foldersToDelete = Array.isArray(confirmDelete) ? confirmDelete : [confirmDelete];
-    setDeletingFolder(foldersToDelete);
+    setIsDeleting(true);
     setDeleteError(null);
     
     // Close modal immediately
@@ -49,7 +49,7 @@ export default function useFolderDelete(onDeleteFolder, folders = [], onDeleteCo
       console.error('Delete error:', error);
       setDeleteError(error.message || 'Failed to delete folder(s)');
     } finally {
-      setDeletingFolder(null);
+      setIsDeleting(false);
     }
   }, [onDeleteFolder, onDeleteComplete, confirmDelete, setSelectedFolders]);
 
@@ -60,7 +60,7 @@ export default function useFolderDelete(onDeleteFolder, folders = [], onDeleteCo
 
   return {
     selectedFolders,
-    deletingFolder,
+    isDeleting,
     confirmDelete,
     deleteError,
     handleToggleFolder,

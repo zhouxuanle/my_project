@@ -68,23 +68,6 @@ export default function useDataFolders({ autoFetch = false } = {}) {
       // Refetch folders to ensure UI matches backend state after failure
       await fetchFolders();
       
-      // Create and save error notification
-      const deletedFolders = Array.isArray(parentJobId) ? parentJobId : [parentJobId];
-      const folderNames = deletedFolders.join(', ');
-      const errorMsg = `Failed to delete ${deletedFolders.length === 1 ? 'folder' : 'folders'}: ${folderNames}. ${err.message}`;
-      
-      const saveRes = await api.saveNotification(errorMsg, 'failed');
-      const saveData = await saveRes.json();
-      
-      if (saveData.notification_id) {
-        addNotification('job', {
-          id: saveData.notification_id,
-          message: errorMsg,
-          status: 'failed',
-          timestamp: new Date().toISOString()
-        });
-      }
-      
       throw err;
     }
   }, [folders, setFolders, addNotification]);

@@ -37,15 +37,15 @@ def register_notification_functions(app: func.FunctionApp):
             notification_storage = NotificationStorage(os.environ.get('AzureWebJobsStorage'))
             
             # Save persistent notification for offline users (idempotent)
-            notification_id = notification_storage.save_notification(
+            notification_id, is_new = notification_storage.save_notification(
                 user_id=user_id,
                 message=log_msg,
                 status='completed',
                 parent_job_id=parent_job_id
             )
             
-            if notification_id is None:
-                logging.info(f'Notification already exists for parent job {parent_job_id}')
+            # Skip SignalR if notification failed to save or already exists (logging handled in save_notification)
+            if not notification_id or not is_new:
                 return
             
             # Send real-time SignalR notification for online users
@@ -58,7 +58,7 @@ def register_notification_functions(app: func.FunctionApp):
                 }]
             }))
             
-            logging.info(f'Completion notification processed for parent job {parent_job_id}')
+            logging.info(f'New completion notification sent for parent job {parent_job_id}')
             
         except Exception as e:
             logging.error(f'Error processing completion notification: {str(e)}')

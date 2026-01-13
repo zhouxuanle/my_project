@@ -52,6 +52,12 @@ export function useSignalR(addNotification) {
         connectionRef.current = connection;
       } catch (err) {
         console.error('SignalR: Connection failed', err);
+        // Clean up on connection failure
+        if (connectionRef.current) {
+          connectionRef.current.off('JobStatusUpdate');
+          connectionRef.current.stop();
+          connectionRef.current = null;
+        }
       } finally {
         connectingRef.current = false;
       }
