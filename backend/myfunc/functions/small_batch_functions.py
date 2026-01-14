@@ -110,7 +110,7 @@ def register_small_batch_functions(app: func.FunctionApp):
                     
                     for entity_type, entity_df in silver_dataframes.items():
                         parquet_bytes = entity_df.to_parquet(index=False, compression='snappy')
-                        silver_file_path = f'temp/pandas/{user_id}/{parent_job_id}/{job_id}/{entity_type}.parquet'
+                        silver_file_path = f'temp_pandas/{user_id}/{parent_job_id}/{job_id}/{entity_type}.parquet'
                         silver_blob_client = adls_service_client.get_blob_client(
                             container='shanlee-cleaned-data',  
                             blob=silver_file_path
@@ -134,7 +134,7 @@ def register_small_batch_functions(app: func.FunctionApp):
                 tracker = JobTracker(os.environ['AzureWebJobsStorage'], table_name='SmallBatchJobs')
                 total_jobs = len(job_ids)
                 if tracker.is_all_jobs_completed(user_id, parent_job_id, total_jobs):
-                    # trigger_adf_pipeline(user_id, parent_job_id,'ADF_SMALL_BATCH_PIPELINE_NAME')
+                    trigger_adf_pipeline(user_id, parent_job_id,'ADF_SMALL_BATCH_PIPELINE_NAME')
                     
                     tracker.cleanup_completed_jobs(user_id, parent_job_id)
             except Exception as e:

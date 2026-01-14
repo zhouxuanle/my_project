@@ -19,7 +19,9 @@ import azure.functions as func
 import logging
 
 # Import function registration modules
-from functions import register_signalr_functions, register_queue_functions, register_notification_functions, register_small_batch_functions, register_adf_completion_functions, register_large_batch_functions
+from functions import register_signalr_functions, register_queue_functions, register_notification_functions, register_small_batch_functions, register_adf_completion_functions, register_large_batch_timer_functions
+# from functions import register_signalr_functions, register_queue_functions, register_notification_functions, register_small_batch_functions, register_adf_completion_functions, register_large_batch_functions, register_large_batch_timer_functions
+
 # Initialize the Azure Functions app
 app = func.FunctionApp()
 
@@ -29,6 +31,7 @@ register_queue_functions(app)
 register_notification_functions(app)
 register_small_batch_functions(app)
 register_adf_completion_functions(app)
-register_large_batch_functions(app)
+# register_large_batch_functions(app)
+register_large_batch_timer_functions(app)
 
 logging.info("All Azure Functions registered successfully")
