@@ -24,6 +24,12 @@ def transform_wishlist_data(wishlist_records: List[Dict]) -> pd.DataFrame:
     # Filter out rows containing 'invalid' in any column
     wishlist_df = wishlist_df[~wishlist_df.apply(lambda row: row.astype(str).str.lower().str.contains('invalid').any(), axis=1)]
 
+    # Explicit timestamp casting for datetime columns
+    timestamp_columns = ['create_time', 'delete_time']
+    for col in timestamp_columns:
+        if col in wishlist_df.columns:
+            wishlist_df[col] = pd.to_datetime(wishlist_df[col], errors='coerce')
+
     # Remove rows with NaN values created during type casting (after coercion)
     wishlist_df = wishlist_df.dropna()
 

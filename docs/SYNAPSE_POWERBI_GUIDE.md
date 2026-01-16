@@ -138,6 +138,7 @@ To exclude the `test/` folder and have more control, use `OPENROWSET` with UNION
 
 ```sql
 -- Switch to your database
+-- Switch to your database
 USE [eCommerce_DW];
 GO
 
@@ -147,12 +148,40 @@ SELECT * FROM OPENROWSET(
     BULK 'pandas/*/*/user.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    username VARCHAR(255),
+    real_name VARCHAR(255),
+    phone_number VARCHAR(50),
+    sex VARCHAR(20),
+    job VARCHAR(255),
+    company VARCHAR(255),
+    email VARCHAR(255),
+    password VARCHAR(255),
+    birth_of_date DATE,
+    age INT,
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS pandas_users
 UNION ALL
 SELECT * FROM OPENROWSET(
     BULK 'spark/*/*/user.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    username VARCHAR(255),
+    real_name VARCHAR(255),
+    phone_number VARCHAR(50),
+    sex VARCHAR(20),
+    job VARCHAR(255),
+    company VARCHAR(255),
+    email VARCHAR(255),
+    password VARCHAR(255),
+    birth_of_date DATE,
+    age INT,
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS spark_users;
 GO
 
@@ -162,12 +191,24 @@ SELECT * FROM OPENROWSET(
     BULK 'pandas/*/*/category.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    name VARCHAR(255),
+    description VARCHAR(MAX),
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS pandas_categories
 UNION ALL
 SELECT * FROM OPENROWSET(
     BULK 'spark/*/*/category.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    name VARCHAR(255),
+    description VARCHAR(MAX),
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS spark_categories;
 GO
 
@@ -177,12 +218,28 @@ SELECT * FROM OPENROWSET(
     BULK 'pandas/*/*/subcategory.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    parent_id VARCHAR(255),
+    name VARCHAR(255),
+    description VARCHAR(MAX),
+    create_time DATETIME2,
+    updated_at DATETIME2,
+    updated_at DATETIME2
 ) AS pandas_sub_categories
 UNION ALL
 SELECT * FROM OPENROWSET(
     BULK 'spark/*/*/subcategory.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    parent_id VARCHAR(255),
+    name VARCHAR(255),
+    description VARCHAR(MAX),
+    create_time DATETIME2,
+    updated_at DATETIME2,
+    updated_at DATETIME2
 ) AS spark_sub_categories;
 GO
 
@@ -192,24 +249,59 @@ SELECT * FROM OPENROWSET(
     BULK 'pandas/*/*/product.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    name VARCHAR(255),
+    description VARCHAR(MAX),
+    category_id VARCHAR(255),
+    create_time DATETIME2,
+    updated_at DATETIME2,
+    updated_at DATETIME2
 ) AS pandas_products
 UNION ALL
 SELECT * FROM OPENROWSET(
     BULK 'spark/*/*/product.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    name VARCHAR(255),
+    description VARCHAR(MAX),
+    category_id VARCHAR(255),
+    create_time DATETIME2,
+    updated_at DATETIME2,
+    updated_at DATETIME2
 ) AS spark_products;
 GO
 
--- Products SKUs View (File not found - skipped)
--- CREATE VIEW ext_products_skus AS
--- SELECT *
--- FROM OPENROWSET(
---     BULK 'pandas/*/*/products_skus.parquet, spark/*/*/products_skus.parquet',
---     DATA_SOURCE = 'SilverLayerADLS',
---     FORMAT = 'PARQUET'
--- ) AS products_skus;
--- GO
+-- Products SKUs View
+CREATE VIEW ext_products_skus AS
+SELECT * FROM OPENROWSET(
+    BULK 'pandas/*/*/products_sku.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    product_id VARCHAR(255),
+    quantity INT,
+    price DECIMAL(18,2),
+    create_time DATETIME2,
+    updated_at DATETIME2
+) AS pandas_products_skus
+UNION ALL
+SELECT * FROM OPENROWSET(
+    BULK 'spark/*/*/products_sku.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    product_id VARCHAR(255),
+    quantity INT,
+    price DECIMAL(18,2),
+    create_time DATETIME2,
+    updated_at DATETIME2
+) AS spark_products_skus;
+GO
 
 -- Order Details View
 CREATE VIEW ext_order_details AS
@@ -217,12 +309,24 @@ SELECT * FROM OPENROWSET(
     BULK 'pandas/*/*/order.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    user_id VARCHAR(255),
+    payment_id VARCHAR(255),
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS pandas_order_details
 UNION ALL
 SELECT * FROM OPENROWSET(
     BULK 'spark/*/*/order.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    user_id VARCHAR(255),
+    payment_id VARCHAR(255),
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS spark_order_details;
 GO
 
@@ -232,24 +336,59 @@ SELECT * FROM OPENROWSET(
     BULK 'pandas/*/*/order_item.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    order_id VARCHAR(255),
+    products_sku_id VARCHAR(255),
+    quantity INT,
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS pandas_order_item
 UNION ALL
 SELECT * FROM OPENROWSET(
     BULK 'spark/*/*/order_item.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    order_id VARCHAR(255),
+    products_sku_id VARCHAR(255),
+    quantity INT,
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS spark_order_item;
 GO
 
--- Payment Details View (File not found - skipped)
--- CREATE VIEW ext_payment_details AS
--- SELECT *
--- FROM OPENROWSET(
---     BULK 'pandas/*/*/payment_details.parquet, spark/*/*/payment_details.parquet',
---     DATA_SOURCE = 'SilverLayerADLS',
---     FORMAT = 'PARQUET'
--- ) AS payment_details;
--- GO
+-- Payment Details View
+CREATE VIEW ext_payment_details AS
+SELECT * FROM OPENROWSET(
+    BULK 'pandas/*/*/payment.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    amount DECIMAL(18,2),
+    provider VARCHAR(100),
+    status VARCHAR(50),
+    create_time DATETIME2,
+    updated_at DATETIME2,
+    updated_at DATETIME2
+) AS pandas_payment_details
+UNION ALL
+SELECT * FROM OPENROWSET(
+    BULK 'spark/*/*/payment.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    amount DECIMAL(18,2),
+    provider VARCHAR(100),
+    status VARCHAR(50),
+    create_time DATETIME2,
+    updated_at DATETIME2,
+    updated_at DATETIME2
+) AS spark_payment_details;
+GO
 
 -- Addresses View
 CREATE VIEW ext_addresses AS
@@ -257,12 +396,32 @@ SELECT * FROM OPENROWSET(
     BULK 'pandas/*/*/address.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    user_id VARCHAR(255),
+    title VARCHAR(100),
+    address_line VARCHAR(500),
+    country VARCHAR(100),
+    city VARCHAR(100),
+    postal_code VARCHAR(20),
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS pandas_addresses
 UNION ALL
 SELECT * FROM OPENROWSET(
     BULK 'spark/*/*/address.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    user_id VARCHAR(255),
+    title VARCHAR(100),
+    address_line VARCHAR(500),
+    country VARCHAR(100),
+    city VARCHAR(100),
+    postal_code VARCHAR(20),
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS spark_addresses;
 GO
 
@@ -272,12 +431,24 @@ SELECT * FROM OPENROWSET(
     BULK 'pandas/*/*/wishlist.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    user_id VARCHAR(255),
+    products_sku_id VARCHAR(255),
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS pandas_wishlist
 UNION ALL
 SELECT * FROM OPENROWSET(
     BULK 'spark/*/*/wishlist.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
+) WITH (
+    id VARCHAR(255),
+    user_id VARCHAR(255),
+    products_sku_id VARCHAR(255),
+    create_time DATETIME2,
+    updated_at DATETIME2
 ) AS spark_wishlist;
 GO
 ```
@@ -385,7 +556,7 @@ FROM ext_order_details od
 INNER JOIN ext_order_item oi ON od.id = oi.order_id
 INNER JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
 LEFT JOIN ext_payment_details pd ON od.payment_id = pd.id
-WHERE od.delete_time IS NULL
+WHERE od.updated_at IS NULL
 GROUP BY CAST(od.create_time AS DATE);
 GO
 ```
@@ -419,7 +590,7 @@ LEFT JOIN ext_sub_categories sc ON sc.parent_id = c.id
 INNER JOIN ext_products_skus ps ON p.id = ps.product_id
 LEFT JOIN ext_order_item oi ON ps.id = oi.products_sku_id
 LEFT JOIN ext_wishlist w ON ps.id = w.products_sku_id
-WHERE p.delete_time IS NULL
+WHERE p.updated_at IS NULL
 GROUP BY p.id, p.name, c.name, sc.name;
 GO
 ```
@@ -470,7 +641,7 @@ LEFT JOIN ext_order_details od ON u.id = od.user_id
 LEFT JOIN ext_order_item oi ON od.id = oi.order_id
 LEFT JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
 LEFT JOIN ext_wishlist w ON u.id = w.user_id
-WHERE u.delete_time IS NULL
+WHERE u.updated_at IS NULL
 GROUP BY 
     u.id, u.user_name, u.real_name, u.email, u.age, 
     u.sex, u.job, u.company, u.phone_number, a.country, a.city;
@@ -516,7 +687,7 @@ INNER JOIN ext_products_skus ps ON p.id = ps.product_id
 LEFT JOIN ext_order_item oi 
     ON ps.id = oi.products_sku_id 
     AND oi.create_time >= DATEADD(day, -30, GETDATE())
-WHERE p.delete_time IS NULL
+WHERE p.updated_at IS NULL
 GROUP BY p.id, p.name, c.name, ps.id, ps.price, ps.stock;
 GO
 ```
@@ -580,7 +751,7 @@ INNER JOIN ext_users u ON a.user_id = u.id
 LEFT JOIN ext_order_details od ON u.id = od.user_id
 LEFT JOIN ext_order_item oi ON od.id = oi.order_id
 LEFT JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
-WHERE a.delete_time IS NULL AND u.delete_time IS NULL
+WHERE a.updated_at IS NULL AND u.updated_at IS NULL
 GROUP BY a.country, a.city, a.postal_code;
 GO
 ```
@@ -616,7 +787,7 @@ LEFT JOIN ext_sub_categories sc ON c.id = sc.parent_id
 INNER JOIN ext_products p ON c.id = p.category_id
 INNER JOIN ext_products_skus ps ON p.id = ps.product_id
 LEFT JOIN ext_order_item oi ON ps.id = oi.products_sku_id
-WHERE c.delete_time IS NULL
+WHERE c.updated_at IS NULL
 GROUP BY c.id, c.name, sc.id, sc.name;
 GO
 ```
@@ -639,7 +810,7 @@ WITH FirstOrders AS (
         DATEADD(month, DATEDIFF(month, 0, MIN(create_time)), 0) AS cohort_month,
         MIN(create_time) AS first_order_date
     FROM ext_order_details
-    WHERE delete_time IS NULL
+    WHERE updated_at IS NULL
     GROUP BY user_id
 ),
 UserOrders AS (
@@ -651,7 +822,7 @@ UserOrders AS (
     FROM ext_order_details od
     INNER JOIN ext_order_item oi ON od.id = oi.order_id
     INNER JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
-    WHERE od.delete_time IS NULL
+    WHERE od.updated_at IS NULL
     GROUP BY od.user_id, DATEADD(month, DATEDIFF(month, 0, od.create_time), 0)
 )
 SELECT 

@@ -30,6 +30,15 @@ def transform_address_data(address_records: List[Dict]) -> pd.DataFrame:
         if col in address_df.columns:
             address_df[col] = address_df[col].astype(str).str.strip().str.lower()
 
+    # Filter future-dated timestamps: cap to current date if future
+    current_time = pd.Timestamp.now()
+    timestamp_columns = ['create_time', 'delete_time']
+    for col in timestamp_columns:
+        if col in address_df.columns:
+            address_df[col] = pd.to_datetime(address_df[col], errors='coerce')
+            # Cap future dates to current time
+            address_df[col] = address_df[col].apply(lambda x: current_time if pd.notna(x) and x > current_time else x)
+
     # Remove rows with NaN values created during type casting (after coercion)
     address_df = address_df.dropna()
 

@@ -35,10 +35,6 @@ def transform_user_data(user_records: List[Dict]) -> pd.DataFrame:
     if 'id' in user_df.columns:
         user_df = user_df.drop_duplicates(subset=['id'])
 
-    # Deduplicate by user_id (keep last occurrence)
-    if 'user_id' in user_df.columns:
-        user_df = user_df.drop_duplicates(subset=['user_id'], keep='last')
-
     # Filter out rows containing 'invalid' in any column
     user_df = user_df[~user_df.apply(lambda row: row.astype(str).str.lower().str.contains('invalid').any(), axis=1)]
 
@@ -56,6 +52,13 @@ def transform_user_data(user_records: List[Dict]) -> pd.DataFrame:
     if 'birth_of_date' in user_df.columns:
         user_df['birth_of_date'] = pd.to_datetime(user_df['birth_of_date'], errors='coerce')
         user_df.loc[~(user_df['birth_of_date'] < pd.Timestamp.today()), 'birth_of_date'] = None
+    
+    # Convert timestamp columns to proper datetime types before writing to Parquet
+    timestamp_columns = ['create_time', 'delete_time']
+    for col in timestamp_columns:
+        if col in user_df.columns:
+            user_df[col] = pd.to_datetime(user_df[col], errors='coerce')
+    
     # Remove rows with NaN values created during type casting (after coercion)
     user_df = user_df.dropna()
     # Deduplicate based on real_name, keeping the first in alphabetical order

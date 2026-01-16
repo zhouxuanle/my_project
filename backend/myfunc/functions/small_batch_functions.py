@@ -134,7 +134,10 @@ def register_small_batch_functions(app: func.FunctionApp):
                     logger.info(f"Merged {len(merged_df)} total {entity_type} records from {len(df_list)} jobs")
                     
                     # DO NOT convert to string - preserve proper data types (int64, float64, datetime64)
-                    parquet_bytes = merged_df.to_parquet(index=False, compression='snappy')
+                    parquet_bytes = merged_df.to_parquet(
+                        index=False, compression='snappy',coerce_timestamps='ms',  # Use 'ms' (milliseconds) or 'us' (microseconds)
+                        allow_truncated_timestamps=True
+                    )
                     silver_file_path = f'pandas/{user_id}/{parent_job_id}/{entity_type}.parquet'
                     silver_blob_client = adls_service_client.get_blob_client(
                         container='shanlee-cleaned-data',  

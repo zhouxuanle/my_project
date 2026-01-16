@@ -30,6 +30,15 @@ def transform_category_data(category_records: List[Dict]) -> pd.DataFrame:
         if col in category_df.columns:
             category_df[col] = category_df[col].astype(str).str.strip().str.lower()
 
+    # Filter future-dated timestamps: cap to current date if future
+    current_time = pd.Timestamp.now()
+    timestamp_columns = ['create_time', 'delete_time']
+    for col in timestamp_columns:
+        if col in category_df.columns:
+            category_df[col] = pd.to_datetime(category_df[col], errors='coerce')
+            # Cap future dates to current time
+            category_df[col] = category_df[col].apply(lambda x: current_time if pd.notna(x) and x > current_time else x)
+
     # Remove rows with NaN values created during type casting (after coercion)
     category_df = category_df.dropna()
 
