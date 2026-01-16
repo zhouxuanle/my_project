@@ -19,11 +19,13 @@ import os
 from datetime import datetime
 import sys
 import traceback
+import base64
 
 # Add parent directory to path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from azure.storage.blob import BlobServiceClient, ContainerClient
+from azure.storage.queue import QueueClient
 from transformations.pandas import PandasTransformer
 from .utils.job_tracking import JobTracker
 from .utils.adf_utils import trigger_adf_pipeline
@@ -67,6 +69,9 @@ def register_small_batch_functions(app: func.FunctionApp):
             
             logger.info(f"Processing small batch: job_ids={job_ids}, user_id={user_id}")
             
+            # Dictionary to accumulate DataFrames by entity_type across all job_ids
+            accumulated_dataframes = {}
+            
             # Process each job_id in the batch
             for job_id in job_ids:
                 logger.info(f"Processing job_id: {job_id}")
@@ -88,7 +93,7 @@ def register_small_batch_functions(app: func.FunctionApp):
                     
                     # Download blob content from Bronze layer
                     download_stream = blob_client.download_blob()
-                    raw_data_str = download_stream.readall().decode('utf-8')
+                    raw_data_str = download_stream.readall()
                 
                 except Exception as e:
                     logger.error(f"Failed to read raw data for job {job_id}: {str(e)}")
@@ -98,28 +103,17 @@ def register_small_batch_functions(app: func.FunctionApp):
                 try:
                     silver_dataframes = transformer.transform_to_silver(raw_data_str)
                     # Since all entity tables have the same length (equal to raw record count)
-                    raw_record_count = len(list(silver_dataframes.values())[0]) 
+                    raw_record_count = len(list(silver_dataframes.values())[0])
+                    
+                    # Accumulate DataFrames by entity_type
+                    for entity_type, entity_df in silver_dataframes.items():
+                        if entity_type not in accumulated_dataframes:
+                            accumulated_dataframes[entity_type] = []
+                        accumulated_dataframes[entity_type].append(entity_df)
+                        logger.info(f"Accumulated {len(entity_df)} {entity_type} records from job {job_id}")
                
                 except Exception as e:
                     logger.error(f"Failed Silver transformation for job {job_id}: {str(e)}")
-                    continue
-                
-                # Save Silver layer to ADLS Gen2
-                try:
-                    adls_service_client = BlobServiceClient.from_connection_string(blob_conn_str)
-                    
-                    for entity_type, entity_df in silver_dataframes.items():
-                        parquet_bytes = entity_df.to_parquet(index=False, compression='snappy')
-                        silver_file_path = f'temp_pandas/{user_id}/{parent_job_id}/{job_id}/{entity_type}.parquet'
-                        silver_blob_client = adls_service_client.get_blob_client(
-                            container='shanlee-cleaned-data',  
-                            blob=silver_file_path
-                        )
-                        silver_blob_client.upload_blob(parquet_bytes, overwrite=True)
-                        logger.info(f"Saved {len(entity_df)} {entity_type} records to {silver_file_path}")
-                    
-                except Exception as e:
-                    logger.error(f"Failed to save to ADLS Gen2 for job {job_id}: {str(e)}")
                     continue
                 
                 # Track completion for this job
@@ -129,13 +123,51 @@ def register_small_batch_functions(app: func.FunctionApp):
                 except Exception as e:
                     logger.error(f"Failed completion tracking for job {job_id}: {str(e)}")
             
-            # After processing all jobs, check if all are completed and trigger ADF
+            # Merge and save accumulated DataFrames to ADLS Gen2
+            try:
+                import pandas as pd
+                adls_service_client = BlobServiceClient.from_connection_string(blob_conn_str)
+                
+                for entity_type, df_list in accumulated_dataframes.items():
+                    # Concatenate all DataFrames for this entity_type
+                    merged_df = pd.concat(df_list, ignore_index=True)
+                    logger.info(f"Merged {len(merged_df)} total {entity_type} records from {len(df_list)} jobs")
+                    
+                    # DO NOT convert to string - preserve proper data types (int64, float64, datetime64)
+                    parquet_bytes = merged_df.to_parquet(index=False, compression='snappy')
+                    silver_file_path = f'pandas/{user_id}/{parent_job_id}/{entity_type}.parquet'
+                    silver_blob_client = adls_service_client.get_blob_client(
+                        container='shanlee-cleaned-data',  
+                        blob=silver_file_path
+                    )
+                    silver_blob_client.upload_blob(parquet_bytes, overwrite=True)
+                    logger.info(f"Saved merged {entity_type} to {silver_file_path}")
+                
+            except Exception as e:
+                logger.error(f"Failed to merge and save to ADLS Gen2: {str(e)}")
+            
+            # After processing all jobs, check if all are completed and send notification
             try:
                 tracker = JobTracker(os.environ['AzureWebJobsStorage'], table_name='SmallBatchJobs')
                 total_jobs = len(job_ids)
                 if tracker.is_all_jobs_completed(user_id, parent_job_id, total_jobs):
-                    trigger_adf_pipeline(user_id, parent_job_id,'ADF_SMALL_BATCH_PIPELINE_NAME')
+                    log_msg = f'Data cleaning completed for parent job {parent_job_id}. All {total_jobs} jobs processed and merged into parquet files.'
                     
+                    # Enqueue completion notification
+                    try:
+                        queue_client = QueueClient.from_connection_string(blob_conn_str, "completion-notification-queue")
+                        notification_msg = {
+                            "user_id": user_id,
+                            "parent_job_id": parent_job_id,
+                            "log_msg": log_msg
+                        }
+                        encoded_message = base64.b64encode(json.dumps(notification_msg).encode('utf-8')).decode('utf-8')
+                        queue_client.send_message(encoded_message)
+                        logger.info(f'Enqueued data cleaning completion notification for parent job {parent_job_id}')
+                    except Exception as enqueue_err:
+                        logger.error(f'Failed to enqueue completion notification: {str(enqueue_err)}')
+                    
+                    # Clean up completed job entities
                     tracker.cleanup_completed_jobs(user_id, parent_job_id)
             except Exception as e:
                 logger.error(f"Failed final completion check: {str(e)}")

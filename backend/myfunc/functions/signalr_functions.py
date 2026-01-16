@@ -16,12 +16,15 @@ def register_signalr_functions(app: func.FunctionApp):
     @app.function_name(name="negotiate")
     @app.route(route="negotiate", auth_level=func.AuthLevel.ANONYMOUS)
     @app.generic_input_binding(arg_name="connectionInfo", type="signalRConnectionInfo", 
-                               hubName="shanleeSignalR", 
+                               hubName="shanleeSignalR",
+                               userId="{query.userId}",
                                connectionStringSetting="AZURE_SIGNALR_CONNECTION_STRING")
     def negotiate(req: func.HttpRequest, connectionInfo: str):
         """
-        SignalR negotiate endpoint for establishing real-time connections
+        SignalR negotiate endpoint for establishing real-time connections with userId binding
         """
+        user_id = req.params.get('userId')
+        logging.info(f"SignalR negotiate called for userId: {user_id}")
         return func.HttpResponse(connectionInfo, mimetype="application/json")
     
     logging.info("SignalR functions registered")

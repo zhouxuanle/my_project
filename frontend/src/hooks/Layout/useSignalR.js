@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { HubConnectionBuilder } from '@microsoft/signalr';
 import useAuthStore from '../../stores/authStore';
+import { ConsoleLogger } from '@microsoft/signalr/dist/esm/Utils';
 
 export function useSignalR(addNotification) {
   const connectionRef = useRef(null);
@@ -19,14 +20,23 @@ export function useSignalR(addNotification) {
   }, [isLoggedIn]);
 
   useEffect(() => {
+    console.log('SignalR: useEffect triggered');
     if (connectionRef.current || connectingRef.current || !isLoggedIn) return;
 
     const connectSignalR = async () => {
       connectingRef.current = true;
       try {
-        const response = await fetch('/api/negotiate');
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+          console.error('SignalR: No userId found in localStorage');
+          return;
+        }
+
+        console.log('SignalR: Negotiating connection for userId:', userId);
+        const response = await fetch(`/api/negotiate?userId=${encodeURIComponent(userId)}`);
         if (!response.ok) throw new Error(`Negotiate failed: ${response.status}`);
         const connectionInfo = await response.json();
+        console.log('SignalR: Negotiate successful, building connection');
 
         const connection = new HubConnectionBuilder()
           .withUrl(connectionInfo.url, {
@@ -37,6 +47,7 @@ export function useSignalR(addNotification) {
 
         // Use ref to always get the latest addNotification function
         const handler = (data) => {
+          console.log('SignalR: JobStatusUpdate received:', data);
           const jobData = Array.isArray(data) ? data[0] : data;
           addNotification('job', {
             id: jobData.id,
@@ -49,6 +60,7 @@ export function useSignalR(addNotification) {
         connection.on('JobStatusUpdate', handler);
 
         await connection.start();
+        console.log('SignalR: Connection started successfully');
         connectionRef.current = connection;
       } catch (err) {
         console.error('SignalR: Connection failed', err);

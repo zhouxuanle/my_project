@@ -60,7 +60,7 @@ def generate_related_description(subcategory_name, category_name):
     else:
         return base_desc + f" Quality {category_name.lower()} products."
 
-def get_random_with_error(real_value, error_rate=0.3, error_generator=None):
+def get_random_with_error(real_value, error_rate=0.05, error_generator=None):
     """Return real value or error based on error rate."""
     if random.random() < error_rate:
         if error_generator:

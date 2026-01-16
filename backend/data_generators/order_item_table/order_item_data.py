@@ -2,7 +2,7 @@ import random
 from datetime import datetime, timedelta
 import uuid
 
-def get_random_with_error(real_value, error_rate=0.3, error_generator=None):
+def get_random_with_error(real_value, error_rate=0.05, error_generator=None):
     """Return real value or error based on error rate."""
     if random.random() < error_rate:
         if error_generator:
@@ -31,7 +31,7 @@ def generate_order_item_data(products_sku, order):
     # Generate with possible errors
     order_id = get_random_with_error(order["id"], error_generator=invalid_order_id)
     products_sku_id = get_random_with_error(products_sku["id"], error_generator=invalid_sku_id)
-    quantity = get_random_with_error(random.randint(1, 99999999), error_generator=invalid_quantity)
+    quantity = get_random_with_error(random.randint(1, 10000), error_generator=invalid_quantity)
 
     order_item_data = {
         'id': order_item_id,

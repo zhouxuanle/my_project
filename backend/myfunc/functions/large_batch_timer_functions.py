@@ -1,13 +1,13 @@
 """
 Azure Function for V1.0: Large Batch Daily Processing (Timer-Triggered)
 
-This function runs every 45 seconds to process accumulated large batch messages:
+This function runs every 10 hours to process accumulated large batch messages:
 1. Checks large-batch-queue for pending messages
 2. If messages exist, processes each: triggers ADF LargeBatchCleaningPipeline
 3. Deletes processed messages from queue
 4. ADF orchestrates Databricks notebook for Bronze → Silver → Gold transformation
 
-Trigger: Timer (every 45 seconds)
+Trigger: Timer (every 10 hours)
 Schedule: Only when queue has messages
 Processing Path: Large Batch (>10k records)
 """
@@ -35,18 +35,18 @@ def register_large_batch_timer_functions(app: func.FunctionApp):
         app: The main FunctionApp instance
     """
     
-    @app.timer_trigger(arg_name="timer", schedule="*/45 * * * * *")
+    @app.timer_trigger(arg_name="timer", schedule="0 0 */10 * * *")
     def process_large_batch_timer_daily(timer: func.TimerRequest):
         """
-        Timer-triggered function to process large batch messages every 45 seconds.
+        Timer-triggered function to process large batch messages every 10 hours.
         
-        Runs every 45 seconds and checks for accumulated messages in large-batch-queue.
+        Runs every 10 hours and checks for accumulated messages in large-batch-queue.
         If messages exist, processes all: triggers ADF LargeBatchCleaningPipeline for each.
         
         **Processing Path:** Large Batch (>10k records)
         **Orchestrator:** Azure Data Factory
         **Processor:** Azure Databricks (PySpark)
-        **Trigger:** Timer (every 45 seconds)
+        **Trigger:** Timer (every 10 hours)
         
         Data Flow:
         1. Check large-batch-queue for messages

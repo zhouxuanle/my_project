@@ -34,7 +34,7 @@ with open(os.path.join(script_dir, 'data', 'birth_dates.txt'), 'r') as f:
 
 sex_options = ['male', 'female', 'other']
 
-def get_random_with_error(real_data, error_rate=0.3, error_generator=None):
+def get_random_with_error(real_data, error_rate=0.05, error_generator=None):
     """Return real data or error data based on error rate."""
     if random.random() < error_rate:
         if error_generator:

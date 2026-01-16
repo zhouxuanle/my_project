@@ -30,6 +30,9 @@ def transform_category_data(category_records: List[Dict]) -> pd.DataFrame:
         if col in category_df.columns:
             category_df[col] = category_df[col].astype(str).str.strip().str.lower()
 
+    # Remove rows with NaN values created during type casting (after coercion)
+    category_df = category_df.dropna()
+
     # Remove duplicates based on id
     if 'id' in category_df.columns:
         category_df = category_df.drop_duplicates(subset=['id'])

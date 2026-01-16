@@ -23,7 +23,7 @@ class Config:
     AZURE_STORAGE_CONNECTION_STRING = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
 
     # Data Processing Configuration
-    BATCH_SIZE = 100 # Batch size for data generation jobs
+    BATCH_SIZE = 1000 # Batch size for data generation jobs
 
     # Proxy Configuration
     PROXY_HOST = os.environ.get('PROXY_HOST', '127.0.0.1')

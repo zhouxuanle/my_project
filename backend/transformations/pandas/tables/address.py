@@ -30,6 +30,9 @@ def transform_address_data(address_records: List[Dict]) -> pd.DataFrame:
         if col in address_df.columns:
             address_df[col] = address_df[col].astype(str).str.strip().str.lower()
 
+    # Remove rows with NaN values created during type casting (after coercion)
+    address_df = address_df.dropna()
+
     # Remove duplicates based on user_id
     if 'user_id' in address_df.columns:
         address_df = address_df.drop_duplicates(subset=['user_id'])

@@ -3,7 +3,7 @@ ADF (Azure Data Factory) utility functions
 """
 import logging
 import os
-from azure.identity import DefaultAzureCredential
+from azure.identity import AzureCliCredential  # Instead of DefaultAzureCredential
 from azure.mgmt.datafactory import DataFactoryManagementClient
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ def trigger_adf_pipeline(user_id: str, parent_job_id: str, pipeline_name_env: st
     try:
         pipeline_name = os.environ.get(pipeline_name_env)
         client = DataFactoryManagementClient(
-            credential=DefaultAzureCredential(),
+            credential=AzureCliCredential(),  # Instead of DefaultAzureCredential()
             subscription_id=os.environ['ADF_SUBSCRIPTION_ID']
         )
 

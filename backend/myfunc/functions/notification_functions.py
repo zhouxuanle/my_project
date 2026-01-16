@@ -51,6 +51,7 @@ def register_notification_functions(app: func.FunctionApp):
             # Send real-time SignalR notification for online users
             signalR.set(json.dumps({
                 'target': 'JobStatusUpdate',
+                'userId': user_id,  # Route to specific user connection
                 'arguments': [{
                     "id": notification_id,
                     "status": "completed",

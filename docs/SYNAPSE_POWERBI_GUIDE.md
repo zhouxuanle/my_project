@@ -35,7 +35,7 @@ Based on your `data_generators` folder analysis, you have the following tables:
 Azure ADLS Gen2 (Silver Layer - Parquet)
               ↓
     Azure Synapse Analytics
-    ├── External Tables (PolyBase/COPY)
+    ├── Views (OPENROWSET)
     ├── SQL Views (Business Logic)
     └── Materialized Views (Performance)
               ↓
@@ -73,30 +73,21 @@ az synapse workspace create \
 
 ### **Step 2: Create External Data Source in Synapse**
 
-#### 2.1 Create Master Key & Database Credential
-```sql
--- Run in Synapse SQL Pool (Dedicated or Serverless)
-USE [master];
-GO
+#### 2.1 Create Master Key & Database Credential (Optional)
 
--- Create Master Key (one-time)
-CREATE MASTER KEY ENCRYPTION BY PASSWORD = '<your-strong-password>';
-GO
-
--- Create Database Scoped Credential for ADLS Gen2
-CREATE DATABASE SCOPED CREDENTIAL ADLSCredential
-WITH IDENTITY = 'Managed Identity'; -- Or use 'SHARED ACCESS SIGNATURE'
-GO
-```
+**Note:** If your Synapse workspace's Managed Identity has access to the ADLS Gen2 storage account, you can skip credential creation and omit the `CREDENTIAL` parameter in the external data source (see Step 2.2). However, if you prefer explicit credentials for better security control or if Managed Identity access is not configured, create the credential as follows:
 
 #### 2.2 Create External Data Source
 ```sql
 -- Create External Data Source pointing to your Silver Layer
+-- Note: If your Synapse workspace's Managed Identity has access to the storage account,
+-- you can omit the CREDENTIAL parameter. However, using explicit credentials is recommended
+-- for better security control and clarity.
 CREATE EXTERNAL DATA SOURCE SilverLayerADLS
 WITH (
     TYPE = HADOOP,
-    LOCATION = 'abfss://silver@<your-storage-account>.dfs.core.windows.net/',
-    CREDENTIAL = ADLSCredential
+    LOCATION = 'abfss://shanlee-cleaned-data@shanleestorage.dfs.core.windows.net/'
+    -- CREDENTIAL = ADLSCredential  -- Removed since Managed Identity has access
 );
 GO
 ```
@@ -135,183 +126,159 @@ silver/
             └── ... (other entities)
 ```
 
-**Challenge:** Sometimes only `pandas/` path exists, sometimes only `spark/`, sometimes both exist. We need to read all entity parquet files from all possible paths.
+**Challenge:** Sometimes only `pandas/` path exists, sometimes only `spark/`, sometimes both exist. We need to read all entity parquet files from all possible paths, but exclude `test/` folder.
 
-**Solution:** Use wildcard patterns in EXTERNAL TABLE LOCATION to read from multiple subdirectories dynamically.
+**Solution:** Use `OPENROWSET` with explicit UNION of pandas/ and spark/ paths to include only those folders, dynamically reading from multiple subdirectories.
 
 ---
 
-#### 3.1 Create External Tables with Wildcard Patterns
+#### 3.1 Create External Tables with OPENROWSET (Union Approach)
+
+To exclude the `test/` folder and have more control, use `OPENROWSET` with UNION of pandas/ and spark/ paths. This allows explicit path specification and ensures all files are read from both processing paths.
 
 ```sql
 -- Switch to your database
 USE [eCommerce_DW];
 GO
 
--- Users Table (reads from both pandas/ and spark/ paths with wildcards)
-CREATE EXTERNAL TABLE ext_users (
-    id VARCHAR(255),
-    user_name VARCHAR(255),
-    real_name VARCHAR(255),
-    phone_number VARCHAR(255),
-    sex VARCHAR(255),
-    job VARCHAR(255),
-    company VARCHAR(255),
-    email VARCHAR(255),
-    birth_of_date DATE,
-    age INT,
-    created_at DATETIME2,
-    deleted_at DATETIME2
-)
-WITH (
-    LOCATION = '/*/*/users.parquet',  -- Reads: pandas/*/*/users.parquet AND spark/*/*/users.parquet
-    DATA_SOURCE = SilverLayerADLS,
-    FILE_FORMAT = ParquetFileFormat
-);
+-- Users View (reads from pandas/ and spark/ paths, excludes test/)
+CREATE VIEW ext_users AS
+SELECT * FROM OPENROWSET(
+    BULK 'pandas/*/*/user.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS pandas_users
+UNION ALL
+SELECT * FROM OPENROWSET(
+    BULK 'spark/*/*/user.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS spark_users;
 GO
 
--- Categories Table
-CREATE EXTERNAL TABLE ext_categories (
-    id VARCHAR(255),
-    name VARCHAR(255),
-    description VARCHAR(500),
-    created_at DATETIME2,
-    deleted_at DATETIME2
-)
-WITH (
-    LOCATION = '/*/*/categories.parquet',  -- Reads from all processing paths
-    DATA_SOURCE = SilverLayerADLS,
-    FILE_FORMAT = ParquetFileFormat
-);
+-- Categories View
+CREATE VIEW ext_categories AS
+SELECT * FROM OPENROWSET(
+    BULK 'pandas/*/*/category.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS pandas_categories
+UNION ALL
+SELECT * FROM OPENROWSET(
+    BULK 'spark/*/*/category.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS spark_categories;
 GO
 
--- Sub Categories Table
-CREATE EXTERNAL TABLE ext_sub_categories (
-    id VARCHAR(255),
-    parent_id VARCHAR(255),
-    name VARCHAR(255),
-    description VARCHAR(500),
-    created_at DATETIME2,
-    deleted_at DATETIME2
-)
-WITH (
-    LOCATION = '/*/*/sub_categories.parquet',
-    DATA_SOURCE = SilverLayerADLS,
-    FILE_FORMAT = ParquetFileFormat
-);
+-- Sub Categories View
+CREATE VIEW ext_sub_categories AS
+SELECT * FROM OPENROWSET(
+    BULK 'pandas/*/*/subcategory.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS pandas_sub_categories
+UNION ALL
+SELECT * FROM OPENROWSET(
+    BULK 'spark/*/*/subcategory.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS spark_sub_categories;
 GO
 
--- Products Table
-CREATE EXTERNAL TABLE ext_products (
-    id VARCHAR(255),
-    name VARCHAR(255),
-    description VARCHAR(500),
-    category_id VARCHAR(255),
-    created_at DATETIME2,
-    deleted_at DATETIME2
-)
-WITH (
-    LOCATION = '/*/*/products.parquet',
-    DATA_SOURCE = SilverLayerADLS,
-    FILE_FORMAT = ParquetFileFormat
-);
+-- Products View
+CREATE VIEW ext_products AS
+SELECT * FROM OPENROWSET(
+    BULK 'pandas/*/*/product.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS pandas_products
+UNION ALL
+SELECT * FROM OPENROWSET(
+    BULK 'spark/*/*/product.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS spark_products;
 GO
 
--- Products SKUs Table
-CREATE EXTERNAL TABLE ext_products_skus (
-    id VARCHAR(255),
-    product_id VARCHAR(255),
-    price DECIMAL(18,2),
-    stock INT,
-    created_at DATETIME2,
-    deleted_at DATETIME2
-)
-WITH (
-    LOCATION = '/*/*/products_skus.parquet',
-    DATA_SOURCE = SilverLayerADLS,
-    FILE_FORMAT = ParquetFileFormat
-);
+-- Products SKUs View (File not found - skipped)
+-- CREATE VIEW ext_products_skus AS
+-- SELECT *
+-- FROM OPENROWSET(
+--     BULK 'pandas/*/*/products_skus.parquet, spark/*/*/products_skus.parquet',
+--     DATA_SOURCE = 'SilverLayerADLS',
+--     FORMAT = 'PARQUET'
+-- ) AS products_skus;
+-- GO
+
+-- Order Details View
+CREATE VIEW ext_order_details AS
+SELECT * FROM OPENROWSET(
+    BULK 'pandas/*/*/order.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS pandas_order_details
+UNION ALL
+SELECT * FROM OPENROWSET(
+    BULK 'spark/*/*/order.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS spark_order_details;
 GO
 
--- Order Details Table
-CREATE EXTERNAL TABLE ext_order_details (
-    id VARCHAR(255),
-    user_id VARCHAR(255),
-    payment_id VARCHAR(255),
-    created_at DATETIME2,
-    updated_at DATETIME2
-)
-WITH (
-    LOCATION = '/*/*/order_details.parquet',
-    DATA_SOURCE = SilverLayerADLS,
-    FILE_FORMAT = ParquetFileFormat
-);
+-- Order Item View
+CREATE VIEW ext_order_item AS
+SELECT * FROM OPENROWSET(
+    BULK 'pandas/*/*/order_item.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS pandas_order_item
+UNION ALL
+SELECT * FROM OPENROWSET(
+    BULK 'spark/*/*/order_item.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS spark_order_item;
 GO
 
--- Order Item Table
-CREATE EXTERNAL TABLE ext_order_item (
-    id VARCHAR(255),
-    order_id VARCHAR(255),
-    products_sku_id VARCHAR(255),
-    quantity INT,
-    created_at DATETIME2,
-    updated_at DATETIME2
-)
-WITH (
-    LOCATION = '/*/*/order_item.parquet',
-    DATA_SOURCE = SilverLayerADLS,
-    FILE_FORMAT = ParquetFileFormat
-);
+-- Payment Details View (File not found - skipped)
+-- CREATE VIEW ext_payment_details AS
+-- SELECT *
+-- FROM OPENROWSET(
+--     BULK 'pandas/*/*/payment_details.parquet, spark/*/*/payment_details.parquet',
+--     DATA_SOURCE = 'SilverLayerADLS',
+--     FORMAT = 'PARQUET'
+-- ) AS payment_details;
+-- GO
+
+-- Addresses View
+CREATE VIEW ext_addresses AS
+SELECT * FROM OPENROWSET(
+    BULK 'pandas/*/*/address.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS pandas_addresses
+UNION ALL
+SELECT * FROM OPENROWSET(
+    BULK 'spark/*/*/address.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS spark_addresses;
 GO
 
--- Payment Details Table
-CREATE EXTERNAL TABLE ext_payment_details (
-    id VARCHAR(255),
-    amount DECIMAL(18,2),
-    provider VARCHAR(255),
-    status VARCHAR(255),
-    created_at DATETIME2,
-    updated_at DATETIME2
-)
-WITH (
-    LOCATION = '/*/*/payment_details.parquet',
-    DATA_SOURCE = SilverLayerADLS,
-    FILE_FORMAT = ParquetFileFormat
-);
-GO
-
--- Addresses Table
-CREATE EXTERNAL TABLE ext_addresses (
-    id VARCHAR(255),
-    user_id VARCHAR(255),
-    title VARCHAR(255),
-    address_line VARCHAR(500),
-    country VARCHAR(255),
-    city VARCHAR(255),
-    postal_code VARCHAR(50),
-    created_at DATETIME2,
-    deleted_at DATETIME2
-)
-WITH (
-    LOCATION = '/*/*/addresses.parquet',
-    DATA_SOURCE = SilverLayerADLS,
-    FILE_FORMAT = ParquetFileFormat
-);
-GO
-
--- Wishlist Table
-CREATE EXTERNAL TABLE ext_wishlist (
-    id VARCHAR(255),
-    user_id VARCHAR(255),
-    products_sku_id VARCHAR(255),
-    created_at DATETIME2,
-    deleted_at DATETIME2
-)
-WITH (
-    LOCATION = '/*/*/wishlist.parquet',
-    DATA_SOURCE = SilverLayerADLS,
-    FILE_FORMAT = ParquetFileFormat
-);
+-- Wishlist View
+CREATE VIEW ext_wishlist AS
+SELECT * FROM OPENROWSET(
+    BULK 'pandas/*/*/wishlist.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS pandas_wishlist
+UNION ALL
+SELECT * FROM OPENROWSET(
+    BULK 'spark/*/*/wishlist.parquet',
+    DATA_SOURCE = 'SilverLayerADLS',
+    FORMAT = 'PARQUET'
+) AS spark_wishlist;
 GO
 ```
 
@@ -325,7 +292,7 @@ If you need more control or want to query specific paths dynamically, use `OPENR
 -- Example: Query users from both pandas and spark paths
 SELECT *
 FROM OPENROWSET(
-    BULK 'pandas/*/*/users.parquet, spark/*/*/users.parquet',
+    BULK 'pandas/*/*/user.parquet, spark/*/*/user.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) AS users;
@@ -334,7 +301,7 @@ FROM OPENROWSET(
 CREATE VIEW vw_users_dynamic AS
 SELECT *
 FROM OPENROWSET(
-    BULK '/*/*/users.parquet',  -- Will match: pandas/*/*/users.parquet AND spark/*/*/users.parquet
+    BULK 'pandas/*/*/user.parquet, spark/*/*/user.parquet',  -- Will match: pandas/*/*/user.parquet AND spark/*/*/user.parquet
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) AS users;
@@ -350,13 +317,13 @@ If your Synapse version has limitations with wildcards, explicitly UNION data:
 ```sql
 CREATE VIEW ext_users_union AS
 SELECT * FROM OPENROWSET(
-    BULK 'pandas/*/*/users.parquet',
+    BULK 'pandas/*/*/user.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) AS pandas_users
 UNION ALL
 SELECT * FROM OPENROWSET(
-    BULK 'spark/*/*/users.parquet',
+    BULK 'spark/*/*/user.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) AS spark_users;
@@ -373,8 +340,8 @@ Test that the wildcard pattern works correctly:
 -- Test: Check if data is being read from both paths
 SELECT 
     COUNT(*) AS total_records,
-    MIN(created_at) AS earliest_record,
-    MAX(created_at) AS latest_record
+    MIN(create_time) AS earliest_record,
+    MAX(create_time) AS latest_record
 FROM ext_users;
 
 -- Test: Verify all entities are accessible
@@ -382,11 +349,17 @@ SELECT 'users' AS entity, COUNT(*) AS record_count FROM ext_users
 UNION ALL
 SELECT 'categories', COUNT(*) FROM ext_categories
 UNION ALL
+SELECT 'sub_categories', COUNT(*) FROM ext_sub_categories
+UNION ALL
 SELECT 'products', COUNT(*) FROM ext_products
 UNION ALL
 SELECT 'order_details', COUNT(*) FROM ext_order_details
 UNION ALL
-SELECT 'payment_details', COUNT(*) FROM ext_payment_details;
+SELECT 'order_item', COUNT(*) FROM ext_order_item
+UNION ALL
+SELECT 'addresses', COUNT(*) FROM ext_addresses
+UNION ALL
+SELECT 'wishlist', COUNT(*) FROM ext_wishlist;
 ```
 
 ---
@@ -399,7 +372,7 @@ SELECT 'payment_details', COUNT(*) FROM ext_payment_details;
 ```sql
 CREATE VIEW vw_sales_overview AS
 SELECT 
-    CAST(od.created_at AS DATE) AS order_date,
+    CAST(od.create_time AS DATE) AS order_date,
     COUNT(DISTINCT od.id) AS total_orders,
     COUNT(DISTINCT od.user_id) AS unique_customers,
     SUM(oi.quantity) AS total_items_sold,
@@ -412,8 +385,8 @@ FROM ext_order_details od
 INNER JOIN ext_order_item oi ON od.id = oi.order_id
 INNER JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
 LEFT JOIN ext_payment_details pd ON od.payment_id = pd.id
-WHERE od.deleted_at IS NULL
-GROUP BY CAST(od.created_at AS DATE);
+WHERE od.delete_time IS NULL
+GROUP BY CAST(od.create_time AS DATE);
 GO
 ```
 
@@ -446,7 +419,7 @@ LEFT JOIN ext_sub_categories sc ON sc.parent_id = c.id
 INNER JOIN ext_products_skus ps ON p.id = ps.product_id
 LEFT JOIN ext_order_item oi ON ps.id = oi.products_sku_id
 LEFT JOIN ext_wishlist w ON ps.id = w.products_sku_id
-WHERE p.deleted_at IS NULL
+WHERE p.delete_time IS NULL
 GROUP BY p.id, p.name, c.name, sc.name;
 GO
 ```
@@ -480,9 +453,9 @@ SELECT
     SUM(oi.quantity) AS total_items_purchased,
     SUM(CAST(ps.price AS DECIMAL(18,2)) * oi.quantity) AS lifetime_value,
     AVG(CAST(ps.price AS DECIMAL(18,2)) * oi.quantity) AS avg_order_value,
-    MAX(od.created_at) AS last_order_date,
-    MIN(od.created_at) AS first_order_date,
-    DATEDIFF(day, MIN(od.created_at), MAX(od.created_at)) AS customer_tenure_days,
+    MAX(od.create_time) AS last_order_date,
+    MIN(od.create_time) AS first_order_date,
+    DATEDIFF(day, MIN(od.create_time), MAX(od.create_time)) AS customer_tenure_days,
     COUNT(DISTINCT w.id) AS wishlist_items_count,
     -- Customer Segment
     CASE 
@@ -497,7 +470,7 @@ LEFT JOIN ext_order_details od ON u.id = od.user_id
 LEFT JOIN ext_order_item oi ON od.id = oi.order_id
 LEFT JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
 LEFT JOIN ext_wishlist w ON u.id = w.user_id
-WHERE u.deleted_at IS NULL
+WHERE u.delete_time IS NULL
 GROUP BY 
     u.id, u.user_name, u.real_name, u.email, u.age, 
     u.sex, u.job, u.company, u.phone_number, a.country, a.city;
@@ -542,8 +515,8 @@ INNER JOIN ext_categories c ON p.category_id = c.id
 INNER JOIN ext_products_skus ps ON p.id = ps.product_id
 LEFT JOIN ext_order_item oi 
     ON ps.id = oi.products_sku_id 
-    AND oi.created_at >= DATEADD(day, -30, GETDATE())
-WHERE p.deleted_at IS NULL
+    AND oi.create_time >= DATEADD(day, -30, GETDATE())
+WHERE p.delete_time IS NULL
 GROUP BY p.id, p.name, c.name, ps.id, ps.price, ps.stock;
 GO
 ```
@@ -568,7 +541,7 @@ SELECT
     AVG(CAST(pd.amount AS DECIMAL(18,2))) AS avg_transaction_amount,
     MIN(CAST(pd.amount AS DECIMAL(18,2))) AS min_amount,
     MAX(CAST(pd.amount AS DECIMAL(18,2))) AS max_amount,
-    CAST(pd.created_at AS DATE) AS transaction_date,
+    CAST(pd.create_time AS DATE) AS transaction_date,
     -- Success rate
     CAST(
         SUM(CASE WHEN pd.status = 'Success' THEN 1 ELSE 0 END) * 100.0 
@@ -576,8 +549,8 @@ SELECT
         AS DECIMAL(5,2)
     ) AS success_rate_pct
 FROM ext_payment_details pd
-WHERE pd.created_at IS NOT NULL
-GROUP BY pd.provider, pd.status, CAST(pd.created_at AS DATE);
+WHERE pd.create_time IS NOT NULL
+GROUP BY pd.provider, pd.status, CAST(pd.create_time AS DATE);
 GO
 ```
 
@@ -607,7 +580,7 @@ INNER JOIN ext_users u ON a.user_id = u.id
 LEFT JOIN ext_order_details od ON u.id = od.user_id
 LEFT JOIN ext_order_item oi ON od.id = oi.order_id
 LEFT JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
-WHERE a.deleted_at IS NULL AND u.deleted_at IS NULL
+WHERE a.delete_time IS NULL AND u.delete_time IS NULL
 GROUP BY a.country, a.city, a.postal_code;
 GO
 ```
@@ -643,7 +616,7 @@ LEFT JOIN ext_sub_categories sc ON c.id = sc.parent_id
 INNER JOIN ext_products p ON c.id = p.category_id
 INNER JOIN ext_products_skus ps ON p.id = ps.product_id
 LEFT JOIN ext_order_item oi ON ps.id = oi.products_sku_id
-WHERE c.deleted_at IS NULL
+WHERE c.delete_time IS NULL
 GROUP BY c.id, c.name, sc.id, sc.name;
 GO
 ```
@@ -663,23 +636,23 @@ CREATE VIEW vw_cohort_analysis AS
 WITH FirstOrders AS (
     SELECT 
         user_id,
-        DATEADD(month, DATEDIFF(month, 0, MIN(created_at)), 0) AS cohort_month,
-        MIN(created_at) AS first_order_date
+        DATEADD(month, DATEDIFF(month, 0, MIN(create_time)), 0) AS cohort_month,
+        MIN(create_time) AS first_order_date
     FROM ext_order_details
-    WHERE deleted_at IS NULL
+    WHERE delete_time IS NULL
     GROUP BY user_id
 ),
 UserOrders AS (
     SELECT 
         od.user_id,
-        DATEADD(month, DATEDIFF(month, 0, od.created_at), 0) AS order_month,
+        DATEADD(month, DATEDIFF(month, 0, od.create_time), 0) AS order_month,
         COUNT(DISTINCT od.id) AS order_count,
         SUM(CAST(ps.price AS DECIMAL(18,2)) * oi.quantity) AS revenue
     FROM ext_order_details od
     INNER JOIN ext_order_item oi ON od.id = oi.order_id
     INNER JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
-    WHERE od.deleted_at IS NULL
-    GROUP BY od.user_id, DATEADD(month, DATEDIFF(month, 0, od.created_at), 0)
+    WHERE od.delete_time IS NULL
+    GROUP BY od.user_id, DATEADD(month, DATEDIFF(month, 0, od.create_time), 0)
 )
 SELECT 
     fo.cohort_month,
@@ -775,13 +748,13 @@ CREATE MATERIALIZED VIEW mv_daily_sales_summary
 WITH (DISTRIBUTION = HASH(order_date))
 AS
 SELECT 
-    CAST(od.created_at AS DATE) AS order_date,
+    CAST(od.create_time AS DATE) AS order_date,
     COUNT(DISTINCT od.id) AS total_orders,
     SUM(CAST(ps.price AS DECIMAL(18,2)) * oi.quantity) AS total_revenue
 FROM ext_order_details od
 INNER JOIN ext_order_item oi ON od.id = oi.order_id
 INNER JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
-GROUP BY CAST(od.created_at AS DATE);
+GROUP BY CAST(od.create_time AS DATE);
 GO
 
 -- Refresh materialized view
@@ -980,7 +953,7 @@ After validating your Silver→Synapse→Power BI pipeline, consider:
 - [ ] Azure Synapse Workspace created
 - [ ] Firewall rules configured
 - [ ] External data source connected to ADLS Gen2 Silver Layer
-- [ ] External tables created for all 10 data tables
+- [ ] Views created for all 10 data tables
 - [ ] SQL views created for analytics (8 views minimum)
 - [ ] Power BI Desktop installed and connected to Synapse
 - [ ] Dashboard created with 6 pages (Executive, Product, Customer, Inventory, Financial, Retention)
@@ -1001,7 +974,7 @@ Bronze (Raw) → Silver (Cleaned Parquet) → Synapse (SQL Views) → Power BI (
 ```
 
 **Key Achievements:**
-✅ 10 External tables in Synapse  
+✅ 10 Views in Synapse  
 ✅ 8 Pre-built analytical views  
 ✅ 6 Power BI dashboard pages  
 ✅ Real-time/Scheduled refresh capability  

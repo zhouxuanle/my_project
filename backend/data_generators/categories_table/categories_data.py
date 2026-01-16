@@ -38,7 +38,7 @@ def generate_related_description(category_name):
     else:
         return fake.sentence(nb_words=5) + f" High-quality {category_name.lower()} products."
 
-def get_random_with_error(real_data, error_rate=0.3, error_generator=None):
+def get_random_with_error(real_data, error_rate=0.05, error_generator=None):
     """Return real data or error data based on error rate."""
     if random.random() < error_rate:
         if error_generator:
@@ -65,7 +65,7 @@ def generate_categories_data():
     if name and not name.startswith("Invalid"):
         description = generate_related_description(name)
         # Apply error to description
-        if random.random() < 0.3:
+        if random.random() < 0.05:
             description = invalid_description()
     else:
         description = invalid_description()
