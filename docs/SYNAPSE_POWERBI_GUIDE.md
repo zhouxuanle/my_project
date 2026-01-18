@@ -139,7 +139,19 @@ To exclude the `test/` folder and have more control, use `OPENROWSET` with UNION
 ```sql
 -- Switch to your database
 -- Switch to your database
-USE [eCommerce_DW];
+
+DROP VIEW IF EXISTS [dbo].[ext_wishlist];
+DROP VIEW IF EXISTS [dbo].[ext_addresses];
+DROP VIEW IF EXISTS [dbo].[ext_order_item];
+DROP VIEW IF EXISTS [dbo].[ext_order_details];
+DROP VIEW IF EXISTS [dbo].[ext_products];
+DROP VIEW IF EXISTS [dbo].[ext_sub_categories];
+DROP VIEW IF EXISTS [dbo].[ext_categories];
+DROP VIEW IF EXISTS [dbo].[ext_users];
+DROP VIEW IF EXISTS [dbo].[ext_products_skus];
+DROP VIEW IF EXISTS [dbo].[ext_payment_details];
+
+
 GO
 
 -- Users View (reads from pandas/ and spark/ paths, excludes test/)
@@ -165,7 +177,7 @@ SELECT * FROM OPENROWSET(
 ) AS pandas_users
 UNION ALL
 SELECT * FROM OPENROWSET(
-    BULK 'spark/*/*/user.parquet',
+    BULK 'spark/*/*/user/*.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) WITH (
@@ -200,7 +212,7 @@ SELECT * FROM OPENROWSET(
 ) AS pandas_categories
 UNION ALL
 SELECT * FROM OPENROWSET(
-    BULK 'spark/*/*/category.parquet',
+    BULK 'spark/*/*/category/*.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) WITH (
@@ -224,12 +236,11 @@ SELECT * FROM OPENROWSET(
     name VARCHAR(255),
     description VARCHAR(MAX),
     create_time DATETIME2,
-    updated_at DATETIME2,
     updated_at DATETIME2
 ) AS pandas_sub_categories
 UNION ALL
 SELECT * FROM OPENROWSET(
-    BULK 'spark/*/*/subcategory.parquet',
+    BULK 'spark/*/*/subcategory/*.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) WITH (
@@ -238,7 +249,6 @@ SELECT * FROM OPENROWSET(
     name VARCHAR(255),
     description VARCHAR(MAX),
     create_time DATETIME2,
-    updated_at DATETIME2,
     updated_at DATETIME2
 ) AS spark_sub_categories;
 GO
@@ -255,12 +265,11 @@ SELECT * FROM OPENROWSET(
     description VARCHAR(MAX),
     category_id VARCHAR(255),
     create_time DATETIME2,
-    updated_at DATETIME2,
     updated_at DATETIME2
 ) AS pandas_products
 UNION ALL
 SELECT * FROM OPENROWSET(
-    BULK 'spark/*/*/product.parquet',
+    BULK 'spark/*/*/product/*.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) WITH (
@@ -269,7 +278,6 @@ SELECT * FROM OPENROWSET(
     description VARCHAR(MAX),
     category_id VARCHAR(255),
     create_time DATETIME2,
-    updated_at DATETIME2,
     updated_at DATETIME2
 ) AS spark_products;
 GO
@@ -284,20 +292,20 @@ SELECT * FROM OPENROWSET(
     id VARCHAR(255),
     product_id VARCHAR(255),
     quantity INT,
-    price DECIMAL(18,2),
+    price FLOAT,
     create_time DATETIME2,
     updated_at DATETIME2
 ) AS pandas_products_skus
 UNION ALL
 SELECT * FROM OPENROWSET(
-    BULK 'spark/*/*/products_sku.parquet',
+    BULK 'spark/*/*/products_sku/*.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) WITH (
     id VARCHAR(255),
     product_id VARCHAR(255),
     quantity INT,
-    price DECIMAL(18,2),
+    price FLOAT,
     create_time DATETIME2,
     updated_at DATETIME2
 ) AS spark_products_skus;
@@ -318,7 +326,7 @@ SELECT * FROM OPENROWSET(
 ) AS pandas_order_details
 UNION ALL
 SELECT * FROM OPENROWSET(
-    BULK 'spark/*/*/order.parquet',
+    BULK 'spark/*/*/order/*.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) WITH (
@@ -346,7 +354,7 @@ SELECT * FROM OPENROWSET(
 ) AS pandas_order_item
 UNION ALL
 SELECT * FROM OPENROWSET(
-    BULK 'spark/*/*/order_item.parquet',
+    BULK 'spark/*/*/order_item/*.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) WITH (
@@ -367,25 +375,23 @@ SELECT * FROM OPENROWSET(
     FORMAT = 'PARQUET'
 ) WITH (
     id VARCHAR(255),
-    amount DECIMAL(18,2),
+    amount FLOAT,
     provider VARCHAR(100),
     status VARCHAR(50),
     create_time DATETIME2,
-    updated_at DATETIME2,
     updated_at DATETIME2
 ) AS pandas_payment_details
 UNION ALL
 SELECT * FROM OPENROWSET(
-    BULK 'spark/*/*/payment.parquet',
+    BULK 'spark/*/*/payment/*.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) WITH (
     id VARCHAR(255),
-    amount DECIMAL(18,2),
+    amount FLOAT,
     provider VARCHAR(100),
     status VARCHAR(50),
     create_time DATETIME2,
-    updated_at DATETIME2,
     updated_at DATETIME2
 ) AS spark_payment_details;
 GO
@@ -409,7 +415,7 @@ SELECT * FROM OPENROWSET(
 ) AS pandas_addresses
 UNION ALL
 SELECT * FROM OPENROWSET(
-    BULK 'spark/*/*/address.parquet',
+    BULK 'spark/*/*/address/*.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) WITH (
@@ -440,7 +446,7 @@ SELECT * FROM OPENROWSET(
 ) AS pandas_wishlist
 UNION ALL
 SELECT * FROM OPENROWSET(
-    BULK 'spark/*/*/wishlist.parquet',
+    BULK 'spark/*/*/wishlist/*.parquet',
     DATA_SOURCE = 'SilverLayerADLS',
     FORMAT = 'PARQUET'
 ) WITH (
@@ -508,14 +514,14 @@ GO
 Test that the wildcard pattern works correctly:
 
 ```sql
--- Test: Check if data is being read from both paths
+-- Test 1: Check if data is being read from both paths
 SELECT 
     COUNT(*) AS total_records,
     MIN(create_time) AS earliest_record,
     MAX(create_time) AS latest_record
 FROM ext_users;
 
--- Test: Verify all entities are accessible
+-- Test 2: Verify all entities are accessible and show record counts
 SELECT 'users' AS entity, COUNT(*) AS record_count FROM ext_users
 UNION ALL
 SELECT 'categories', COUNT(*) FROM ext_categories
@@ -524,14 +530,131 @@ SELECT 'sub_categories', COUNT(*) FROM ext_sub_categories
 UNION ALL
 SELECT 'products', COUNT(*) FROM ext_products
 UNION ALL
+SELECT 'products_skus', COUNT(*) FROM ext_products_skus
+UNION ALL
 SELECT 'order_details', COUNT(*) FROM ext_order_details
 UNION ALL
 SELECT 'order_item', COUNT(*) FROM ext_order_item
 UNION ALL
+SELECT 'payment_details', COUNT(*) FROM ext_payment_details
+UNION ALL
 SELECT 'addresses', COUNT(*) FROM ext_addresses
 UNION ALL
 SELECT 'wishlist', COUNT(*) FROM ext_wishlist;
+
+-- Test 3: Check for matching relationships (CRITICAL for JOINs to work)
+-- This shows if foreign keys actually match between tables
+SELECT 
+    'products->categories' AS relationship,
+    COUNT(DISTINCT p.id) AS products_with_valid_category,
+    (SELECT COUNT(*) FROM ext_products) AS total_products
+FROM ext_products p
+INNER JOIN ext_categories c ON p.category_id = c.id
+UNION ALL
+SELECT 
+    'products_skus->products',
+    COUNT(DISTINCT ps.id),
+    (SELECT COUNT(*) FROM ext_products_skus)
+FROM ext_products_skus ps
+INNER JOIN ext_products p ON ps.product_id = p.id
+UNION ALL
+SELECT 
+    'order_item->products_skus',
+    COUNT(DISTINCT oi.id),
+    (SELECT COUNT(*) FROM ext_order_item)
+FROM ext_order_item oi
+INNER JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
+UNION ALL
+SELECT 
+    'order_details->users',
+    COUNT(DISTINCT od.id),
+    (SELECT COUNT(*) FROM ext_order_details)
+FROM ext_order_details od
+INNER JOIN ext_users u ON od.user_id = u.id;
+
+-- Test 4: Sample raw data from each table to verify columns
+SELECT TOP 5 * FROM ext_products;
+SELECT TOP 5 * FROM ext_categories;
+SELECT TOP 5 * FROM ext_products_skus;
+SELECT TOP 5 * FROM ext_order_item;
+
+-- Test 5: CRITICAL - Check actual ID formats to find mismatch
+SELECT 
+    'products.category_id' AS field,
+    MIN(category_id) AS min_value,
+    MAX(category_id) AS max_value,
+    COUNT(DISTINCT category_id) AS distinct_count
+FROM ext_products
+UNION ALL
+SELECT 
+    'categories.id',
+    MIN(id),
+    MAX(id),
+    COUNT(DISTINCT id)
+FROM ext_categories;
+
+-- Test 6: Sample actual IDs to compare formats
+SELECT TOP 10 'product' AS source, id, category_id AS ref_id FROM ext_products
+UNION ALL
+SELECT TOP 10 'category', id, NULL FROM ext_categories
+UNION ALL  
+SELECT TOP 10 'product_sku', id, product_id FROM ext_products_skus
+UNION ALL
+SELECT TOP 10 'order_detail', id, user_id FROM ext_order_details
+UNION ALL
+SELECT TOP 10 'user', id, NULL FROM ext_users
+ORDER BY source;
+
+-- ⚠️ CRITICAL FINDING: If Test 5/6 shows products.category_id contains "subcategory_id-*" values,
+-- then products are incorrectly linked to subcategories instead of categories!
+-- This is a data generation bug that requires either:
+--   1. Quick Fix: Update views to join products → subcategories → categories (see section 3.5)
+--   2. Proper Fix: Fix backend/data_generators/products_table/ to use correct category IDs
 ```
+
+---
+
+#### 3.5 Understanding Product-Category Data Model
+
+**✅ DESIGN NOTE:** The data model intentionally uses a hierarchical structure where:
+- `products.category_id` → `subcategories.id` (products link to subcategories)
+- `subcategories.parent_id` → `categories.id` (subcategories link to categories)
+
+This is correct design for a 3-level product hierarchy: **Category → Subcategory → Product**
+
+```sql
+-- Helper view: Products with both category and subcategory info
+CREATE VIEW ext_products_hierarchy AS
+SELECT 
+    p.id,
+    p.name,
+    p.description,
+    p.category_id AS subcategory_id,
+    sc.parent_id AS category_id,
+    sc.name AS subcategory_name,
+    p.create_time,
+    p.updated_at
+FROM ext_products p
+LEFT JOIN ext_sub_categories sc ON p.category_id = sc.id;
+GO
+
+-- Verify the hierarchical relationships
+SELECT 
+    'products->subcategories' AS relationship,
+    COUNT(DISTINCT p.id) AS products_with_valid_subcategory,
+    (SELECT COUNT(*) FROM ext_products) AS total_products
+FROM ext_products p
+INNER JOIN ext_sub_categories sc ON p.category_id = sc.id
+UNION ALL
+SELECT 
+    'subcategories->categories',
+    COUNT(DISTINCT sc.id),
+    (SELECT COUNT(*) FROM ext_sub_categories)
+FROM ext_sub_categories sc
+INNER JOIN ext_categories c ON sc.parent_id = c.id;
+```
+
+**All analytics views below are updated to use this correct hierarchy.**
 
 ---
 
@@ -556,7 +679,6 @@ FROM ext_order_details od
 INNER JOIN ext_order_item oi ON od.id = oi.order_id
 INNER JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
 LEFT JOIN ext_payment_details pd ON od.payment_id = pd.id
-WHERE od.updated_at IS NULL
 GROUP BY CAST(od.create_time AS DATE);
 GO
 ```
@@ -571,7 +693,11 @@ GO
 ### **2. Product Performance Analysis**
 
 #### View: Top Selling Products
+
+**⚠️ IMPORTANT:** If this view returns empty results, run **Test 3** from section 3.4 above to check if foreign keys match between tables. The test data cleaning process may have filtered out records, breaking relationships.
+
 ```sql
+-- Product Performance View with correct hierarchy: products -> subcategories -> categories
 CREATE VIEW vw_product_performance AS
 SELECT 
     p.id AS product_id,
@@ -579,19 +705,33 @@ SELECT
     c.name AS category_name,
     sc.name AS subcategory_name,
     COUNT(DISTINCT oi.order_id) AS times_ordered,
-    SUM(oi.quantity) AS total_quantity_sold,
-    AVG(CAST(ps.price AS DECIMAL(18,2))) AS avg_price,
-    SUM(CAST(ps.price AS DECIMAL(18,2)) * oi.quantity) AS total_revenue,
-    AVG(ps.stock) AS avg_stock_level,
-    COUNT(DISTINCT w.user_id) AS wishlist_count
+    ISNULL(SUM(oi.quantity), 0) AS total_quantity_sold,
+    AVG(ps.price) AS avg_price,
+    ISNULL(SUM(ps.price * oi.quantity), 0) AS total_revenue,
+    AVG(CAST(ps.quantity AS FLOAT)) AS avg_quantity_level,
+    (SELECT COUNT(DISTINCT w.user_id) FROM ext_wishlist w WHERE w.products_sku_id = ps.id) AS wishlist_count
 FROM ext_products p
-INNER JOIN ext_categories c ON p.category_id = c.id
-LEFT JOIN ext_sub_categories sc ON sc.parent_id = c.id
+INNER JOIN ext_sub_categories sc ON p.category_id = sc.id
+INNER JOIN ext_categories c ON sc.parent_id = c.id
 INNER JOIN ext_products_skus ps ON p.id = ps.product_id
 LEFT JOIN ext_order_item oi ON ps.id = oi.products_sku_id
-LEFT JOIN ext_wishlist w ON ps.id = w.products_sku_id
-WHERE p.updated_at IS NULL
-GROUP BY p.id, p.name, c.name, sc.name;
+GROUP BY p.id, p.name, c.name, sc.name, ps.id;
+GO
+
+-- Product Catalog View (all products with full hierarchy)
+CREATE VIEW vw_product_catalog AS
+SELECT 
+    p.id AS product_id,
+    p.name AS product_name,
+    c.name AS category_name,
+    sc.name AS subcategory_name,
+    ps.price,
+    ps.quantity AS stock_quantity,
+    p.create_time
+FROM ext_products p
+INNER JOIN ext_sub_categories sc ON p.category_id = sc.id
+INNER JOIN ext_categories c ON sc.parent_id = c.id
+INNER JOIN ext_products_skus ps ON p.id = ps.product_id;
 GO
 ```
 
@@ -610,7 +750,7 @@ GO
 CREATE VIEW vw_customer_insights AS
 SELECT 
     u.id AS user_id,
-    u.user_name,
+    u.username,
     u.real_name,
     u.email,
     u.age,
@@ -641,9 +781,8 @@ LEFT JOIN ext_order_details od ON u.id = od.user_id
 LEFT JOIN ext_order_item oi ON od.id = oi.order_id
 LEFT JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
 LEFT JOIN ext_wishlist w ON u.id = w.user_id
-WHERE u.updated_at IS NULL
 GROUP BY 
-    u.id, u.user_name, u.real_name, u.email, u.age, 
+    u.id, u.username, u.real_name, u.email, u.age, 
     u.sex, u.job, u.company, u.phone_number, a.country, a.city;
 GO
 ```
@@ -665,30 +804,31 @@ SELECT
     p.id AS product_id,
     p.name AS product_name,
     c.name AS category_name,
+    sc.name AS subcategory_name,
     ps.id AS sku_id,
     ps.price,
-    ps.stock AS current_stock,
+    ps.quantity AS current_quantity,
     ISNULL(SUM(oi.quantity), 0) AS total_sold_last_30_days,
-    -- Stock status
+    -- Quantity status
     CASE 
-        WHEN ps.stock = 0 THEN 'Out of Stock'
-        WHEN ps.stock < 10 THEN 'Low Stock'
-        WHEN ps.stock < 50 THEN 'Medium Stock'
+        WHEN ps.quantity = 0 THEN 'Out of Stock'
+        WHEN ps.quantity < 10 THEN 'Low Stock'
+        WHEN ps.quantity < 50 THEN 'Medium Stock'
         ELSE 'Well Stocked'
     END AS stock_status,
     -- Estimated days to stockout (simple calculation)
     CASE 
         WHEN ISNULL(SUM(oi.quantity), 0) = 0 THEN NULL
-        ELSE ps.stock / (ISNULL(SUM(oi.quantity), 1) / 30.0)
+        ELSE ps.quantity / (ISNULL(SUM(oi.quantity), 1) / 30.0)
     END AS estimated_days_to_stockout
 FROM ext_products p
-INNER JOIN ext_categories c ON p.category_id = c.id
+INNER JOIN ext_sub_categories sc ON p.category_id = sc.id
+INNER JOIN ext_categories c ON sc.parent_id = c.id
 INNER JOIN ext_products_skus ps ON p.id = ps.product_id
 LEFT JOIN ext_order_item oi 
     ON ps.id = oi.products_sku_id 
     AND oi.create_time >= DATEADD(day, -30, GETDATE())
-WHERE p.updated_at IS NULL
-GROUP BY p.id, p.name, c.name, ps.id, ps.price, ps.stock;
+GROUP BY p.id, p.name, c.name, sc.name, ps.id, ps.price, ps.quantity;
 GO
 ```
 
@@ -751,7 +891,6 @@ INNER JOIN ext_users u ON a.user_id = u.id
 LEFT JOIN ext_order_details od ON u.id = od.user_id
 LEFT JOIN ext_order_item oi ON od.id = oi.order_id
 LEFT JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
-WHERE a.updated_at IS NULL AND u.updated_at IS NULL
 GROUP BY a.country, a.city, a.postal_code;
 GO
 ```
@@ -784,10 +923,9 @@ SELECT
         OVER () AS revenue_percentage
 FROM ext_categories c
 LEFT JOIN ext_sub_categories sc ON c.id = sc.parent_id
-INNER JOIN ext_products p ON c.id = p.category_id
+INNER JOIN ext_products p ON sc.id = p.category_id  -- products link to subcategories
 INNER JOIN ext_products_skus ps ON p.id = ps.product_id
 LEFT JOIN ext_order_item oi ON ps.id = oi.products_sku_id
-WHERE c.updated_at IS NULL
 GROUP BY c.id, c.name, sc.id, sc.name;
 GO
 ```
@@ -810,7 +948,6 @@ WITH FirstOrders AS (
         DATEADD(month, DATEDIFF(month, 0, MIN(create_time)), 0) AS cohort_month,
         MIN(create_time) AS first_order_date
     FROM ext_order_details
-    WHERE updated_at IS NULL
     GROUP BY user_id
 ),
 UserOrders AS (
@@ -822,7 +959,6 @@ UserOrders AS (
     FROM ext_order_details od
     INNER JOIN ext_order_item oi ON od.id = oi.order_id
     INNER JOIN ext_products_skus ps ON oi.products_sku_id = ps.id
-    WHERE od.updated_at IS NULL
     GROUP BY od.user_id, DATEADD(month, DATEDIFF(month, 0, od.create_time), 0)
 )
 SELECT 
